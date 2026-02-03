@@ -40,6 +40,7 @@ const AdminDashboard = () => {
   const [orders, setOrders] = useState<any[]>([]);
   const [farmers, setFarmers] = useState<any[]>([]);
   const [consumers, setConsumers] = useState<any[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
   const [statsData, setStatsData] = useState({
     totalFarmers: 0,
     totalConsumers: 0,
@@ -48,6 +49,7 @@ const AdminDashboard = () => {
   });
   const [pendingApprovals, setPendingApprovals] = useState<any[]>([]);
   const [selectedFarmer, setSelectedFarmer] = useState<any>(null);
+  const [viewingActivity, setViewingActivity] = useState(false);
 
   const fetchPendingApprovals = async () => {
     try {
@@ -100,12 +102,19 @@ const AdminDashboard = () => {
         const orderData = await orderRes.json();
         setOrders(orderData.map((o: any) => ({
           id: o._id,
+          consumerId: o.consumer?._id,
           consumerName: o.consumer?.name || 'Unknown',
           totalAmount: o.totalAmount,
           status: o.status,
           createdAt: o.createdAt,
           items: o.items || []
         })));
+      }
+
+      // Fetch All Products (for Farmer activity)
+      const productsRes = await fetch('http://localhost:5000/api/products');
+      if (productsRes.ok) {
+        setProducts(await productsRes.json());
       }
 
       // Fetch All Users (to filter active farmers/consumers) - Need an endpoint or reuse user search
@@ -503,16 +512,21 @@ const AdminDashboard = () => {
         </div>
       </div>
 
-      <Dialog open={!!selectedFarmer} onOpenChange={(open) => !open && setSelectedFarmer(null)}>
+      <Dialog open={!!selectedFarmer} onOpenChange={(open) => {
+        if (!open) {
+          setSelectedFarmer(null);
+          setViewingActivity(false);
+        }
+      }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>User Details</DialogTitle>
+            <DialogTitle>{viewingActivity ? (selectedFarmer?.role === 'consumer' ? 'User Orders' : 'Farmer Crops') : 'User Details'}</DialogTitle>
             <DialogDescription>
-              Information about the selected account.
+              {viewingActivity ? `Activity for ${selectedFarmer?.name}` : 'Information about the selected account.'}
             </DialogDescription>
           </DialogHeader>
 
-          {selectedFarmer && (
+          {selectedFarmer && !viewingActivity && (
             <div className="space-y-4">
               <div className="flex items-center gap-4">
                 <div className={`h-16 w-16 rounded-full flex items-center justify-center text-3xl ${selectedFarmer.role === 'consumer' ? 'bg-accent/20' : 'bg-gram-green-100'}`}>
@@ -553,8 +567,71 @@ const AdminDashboard = () => {
                   <p>{new Date(selectedFarmer.createdAt).toLocaleDateString()}</p>
                 </div>
               </div>
+
+              <Button
+                className="w-full mt-4"
+                onClick={() => setViewingActivity(true)}
+              >
+                {selectedFarmer.role === 'consumer' ? 'View Orders' : 'View Crops'}
+              </Button>
             </div>
           )}
+
+          {selectedFarmer && viewingActivity && (
+            <div className="space-y-4">
+              <div className="max-h-[300px] overflow-y-auto space-y-2 pr-2">
+                {selectedFarmer.role === 'consumer' ? (
+                  orders.filter(o => o.consumerId === selectedFarmer._id).length > 0 ? (
+                    orders.filter(o => o.consumerId === selectedFarmer._id).map((order) => (
+                      <div key={order.id} className="p-3 border rounded-lg bg-muted/30">
+                        <div className="flex justify-between mb-1">
+                          <span className="font-medium">Order #{order.id.slice(-6)}</span>
+                          <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full capitalize">{order.status}</span>
+                        </div>
+                        <div className="text-sm text-muted-foreground mb-1">
+                          {new Date(order.createdAt).toLocaleDateString()} • ₹{order.totalAmount}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {order.items.length} items: {order.items.map((i: any) => i.product?.name || 'Item').join(', ')}
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-center text-muted-foreground py-4">No orders found.</p>
+                  )
+                ) : (
+                  products.filter(p => p.farmer?._id === selectedFarmer._id || p.farmer === selectedFarmer._id).length > 0 ? (
+                    products.filter(p => p.farmer?._id === selectedFarmer._id || p.farmer === selectedFarmer._id).map((product) => (
+                      <div key={product._id} className="flex gap-3 p-3 border rounded-lg bg-muted/30">
+                        <div className="h-10 w-10 text-2xl flex items-center justify-center bg-white rounded-full">
+                          {/* Map category to icon roughly or use generic */}
+                          {categories.find(c => c.value === product.category)?.icon || '📦'}
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex justify-between">
+                            <h4 className="font-medium">{product.name}</h4>
+                            <span className="text-sm font-semibold">₹{product.pricePerUnit}/{product.unit}</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground capitalize">{product.category} • {product.quantityAvailable} {product.unit} avail.</p>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-center text-muted-foreground py-4">No crops listed.</p>
+                  )
+                )}
+              </div>
+
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => setViewingActivity(false)}
+              >
+                Back to Details
+              </Button>
+            </div>
+          )}
+
         </DialogContent>
       </Dialog>
     </Layout >
