@@ -55,7 +55,7 @@ const AdminDashboard = () => {
     try {
       const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
       if (!userInfo.token) return;
-      const res = await fetch('http://localhost:5000/api/admin/users?role=farmer&status=pending', {
+      const res = await fetch('/api/admin/users?role=farmer&status=pending', {
         headers: { Authorization: `Bearer ${userInfo.token}` }
       });
       if (res.ok) setPendingApprovals(await res.json());
@@ -67,7 +67,7 @@ const AdminDashboard = () => {
   const updateStatus = async (id: string, status: string) => {
     try {
       const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
-      const response = await fetch(`http://localhost:5000/api/admin/users/${id}/status`, {
+      const response = await fetch(`/api/admin/users/${id}/status`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -95,7 +95,7 @@ const AdminDashboard = () => {
       fetchPendingApprovals();
 
       // Fetch All Orders
-      const orderRes = await fetch('http://localhost:5000/api/orders', {
+      const orderRes = await fetch('/api/orders', {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (orderRes.ok) {
@@ -112,7 +112,7 @@ const AdminDashboard = () => {
       }
 
       // Fetch All Products (for Farmer activity)
-      const productsRes = await fetch('http://localhost:5000/api/products');
+      const productsRes = await fetch('/api/products');
       if (productsRes.ok) {
         setProducts(await productsRes.json());
       }
@@ -120,12 +120,12 @@ const AdminDashboard = () => {
       // Fetch All Users (to filter active farmers/consumers) - Need an endpoint or reuse user search
       // Assuming /api/admin/users returns all if no specific query or we can filter by role
       // Let's use two calls for simplicity if backend supports query params filters which it does
-      const farmersRes = await fetch('http://localhost:5000/api/admin/users?role=farmer&status=approved', {
+      const farmersRes = await fetch('/api/admin/users?role=farmer&status=approved', {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (farmersRes.ok) setFarmers(await farmersRes.json());
 
-      const consumersRes = await fetch('http://localhost:5000/api/admin/users?role=consumer', {
+      const consumersRes = await fetch('/api/admin/users?role=consumer', {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (consumersRes.ok) setConsumers(await consumersRes.json());

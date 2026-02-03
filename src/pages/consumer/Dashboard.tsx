@@ -34,7 +34,7 @@ const ConsumerDashboard = () => {
 
         // Fetch Orders
         if (userInfo.token) {
-          const orderRes = await fetch('http://localhost:5000/api/orders/myorders', {
+          const orderRes = await fetch('/api/orders/myorders', {
             headers: { Authorization: `Bearer ${userInfo.token}` }
           });
           const orderData = await orderRes.json();
@@ -63,7 +63,7 @@ const ConsumerDashboard = () => {
         }
 
         // Fetch Products for Quick Shop
-        const productRes = await fetch('http://localhost:5000/api/products');
+        const productRes = await fetch('/api/products');
         const productData = await productRes.json();
         if (productRes.ok) {
           const formattedProducts = productData.slice(0, 4).map((p: any) => ({

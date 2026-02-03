@@ -64,7 +64,7 @@ const FarmerDashboard = () => {
       // router.get('/') for all
       // We'll use get all and filter by farmer ID from token (decoded) or user info.
 
-      const productRes = await fetch('http://localhost:5000/api/products', {
+      const productRes = await fetch('/api/products', {
         headers: { Authorization: `Bearer ${userInfo.token}` }
       });
       const productData = await productRes.json();
@@ -92,7 +92,7 @@ const FarmerDashboard = () => {
       }
 
       // Fetch Orders
-      const orderRes = await fetch('http://localhost:5000/api/orders/myorders', {
+      const orderRes = await fetch('/api/orders/myorders', {
         headers: { Authorization: `Bearer ${userInfo.token}` }
       });
       const orderData = await orderRes.json();
@@ -127,7 +127,7 @@ const FarmerDashboard = () => {
     e.preventDefault();
     try {
       const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
-      const res = await fetch('http://localhost:5000/api/products', {
+      const res = await fetch('/api/products', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -43,7 +43,7 @@ const Products = () => {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        let url = 'http://localhost:5000/api/products';
+        let url = '/api/products';
         const params = new URLSearchParams();
         if (selectedCategory !== 'all') params.append('category', selectedCategory);
 
