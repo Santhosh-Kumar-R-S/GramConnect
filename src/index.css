@@ -1,0 +1,181 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* GramConnect Design System - Farm to Consumer Marketplace */
+
+@layer base {
+  :root {
+    /* Core Background & Text */
+    --background: 40 33% 98%;
+    --foreground: 142 30% 15%;
+
+    /* Card Surfaces */
+    --card: 0 0% 100%;
+    --card-foreground: 142 30% 15%;
+
+    /* Popover */
+    --popover: 0 0% 100%;
+    --popover-foreground: 142 30% 15%;
+
+    /* Primary - Deep Forest Green */
+    --primary: 142 50% 35%;
+    --primary-foreground: 40 33% 98%;
+
+    /* Secondary - Soft Sage */
+    --secondary: 142 25% 92%;
+    --secondary-foreground: 142 50% 25%;
+
+    /* Muted - Light Cream */
+    --muted: 40 30% 94%;
+    --muted-foreground: 142 15% 45%;
+
+    /* Accent - Harvest Orange */
+    --accent: 32 95% 55%;
+    --accent-foreground: 40 33% 98%;
+
+    /* Destructive */
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Border & Input */
+    --border: 142 20% 88%;
+    --input: 142 20% 88%;
+    --ring: 142 50% 35%;
+
+    --radius: 0.75rem;
+
+    /* Custom GramConnect Colors */
+    --gram-green-50: 142 40% 96%;
+    --gram-green-100: 142 40% 90%;
+    --gram-green-200: 142 40% 80%;
+    --gram-green-300: 142 45% 65%;
+    --gram-green-400: 142 50% 45%;
+    --gram-green-500: 142 50% 35%;
+    --gram-green-600: 142 55% 28%;
+    --gram-green-700: 142 60% 22%;
+
+    --gram-orange-50: 35 100% 96%;
+    --gram-orange-100: 35 100% 88%;
+    --gram-orange-200: 35 95% 75%;
+    --gram-orange-300: 32 95% 60%;
+    --gram-orange-400: 32 95% 55%;
+    --gram-orange-500: 28 90% 48%;
+
+    --gram-cream: 40 33% 98%;
+    --gram-cream-dark: 40 25% 92%;
+
+    /* Gradients */
+    --gradient-hero: linear-gradient(135deg, hsl(142 50% 35%) 0%, hsl(142 45% 45%) 50%, hsl(32 95% 55%) 100%);
+    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(40 30% 98%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(32 95% 55%) 0%, hsl(35 100% 60%) 100%);
+
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 hsl(142 20% 20% / 0.05);
+    --shadow-md: 0 4px 6px -1px hsl(142 20% 20% / 0.08), 0 2px 4px -2px hsl(142 20% 20% / 0.05);
+    --shadow-lg: 0 10px 15px -3px hsl(142 20% 20% / 0.1), 0 4px 6px -4px hsl(142 20% 20% / 0.05);
+    --shadow-xl: 0 20px 25px -5px hsl(142 20% 20% / 0.1), 0 8px 10px -6px hsl(142 20% 20% / 0.05);
+    --shadow-card: 0 4px 20px -2px hsl(142 30% 25% / 0.08);
+    --shadow-card-hover: 0 12px 30px -4px hsl(142 30% 25% / 0.15);
+
+    /* Sidebar */
+    --sidebar-background: 142 30% 98%;
+    --sidebar-foreground: 142 30% 25%;
+    --sidebar-primary: 142 50% 35%;
+    --sidebar-primary-foreground: 40 33% 98%;
+    --sidebar-accent: 142 25% 92%;
+    --sidebar-accent-foreground: 142 50% 25%;
+    --sidebar-border: 142 20% 88%;
+    --sidebar-ring: 142 50% 35%;
+  }
+
+  .dark {
+    --background: 142 30% 8%;
+    --foreground: 40 33% 95%;
+    --card: 142 25% 12%;
+    --card-foreground: 40 33% 95%;
+    --popover: 142 25% 12%;
+    --popover-foreground: 40 33% 95%;
+    --primary: 142 45% 50%;
+    --primary-foreground: 142 30% 8%;
+    --secondary: 142 25% 18%;
+    --secondary-foreground: 40 33% 95%;
+    --muted: 142 20% 18%;
+    --muted-foreground: 142 15% 60%;
+    --accent: 32 90% 55%;
+    --accent-foreground: 142 30% 8%;
+    --destructive: 0 62% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 142 20% 20%;
+    --input: 142 20% 20%;
+    --ring: 142 45% 50%;
+    --sidebar-background: 142 25% 10%;
+    --sidebar-foreground: 40 33% 95%;
+    --sidebar-primary: 142 45% 50%;
+    --sidebar-primary-foreground: 142 30% 8%;
+    --sidebar-accent: 142 20% 18%;
+    --sidebar-accent-foreground: 40 33% 95%;
+    --sidebar-border: 142 20% 20%;
+    --sidebar-ring: 142 45% 50%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold tracking-tight text-foreground;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .gradient-hero {
+    background: var(--gradient-hero);
+  }
+
+  .gradient-accent {
+    background: var(--gradient-accent);
+  }
+
+  .shadow-card {
+    box-shadow: var(--shadow-card);
+  }
+
+  .shadow-card-hover {
+    box-shadow: var(--shadow-card-hover);
+  }
+
+  .glass-card {
+    @apply bg-card/80 backdrop-blur-md border border-border/50;
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-muted rounded-full;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-primary/30 rounded-full hover:bg-primary/50 transition-colors;
+}
+
+/* Selection */
+::selection {
+  @apply bg-primary/20 text-primary;
+}
