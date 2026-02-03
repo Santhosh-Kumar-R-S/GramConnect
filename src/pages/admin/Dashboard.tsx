@@ -7,6 +7,13 @@ import {
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { cn } from '@/lib/utils';
 import { ProductCategory } from '@/types';
 
@@ -40,6 +47,7 @@ const AdminDashboard = () => {
     totalRevenue: 0
   });
   const [pendingApprovals, setPendingApprovals] = useState<any[]>([]);
+  const [selectedFarmer, setSelectedFarmer] = useState<any>(null);
 
   const fetchPendingApprovals = async () => {
     try {
@@ -366,7 +374,7 @@ const AdminDashboard = () => {
                           <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded-full">
                             Active
                           </span>
-                          <Button variant="ghost" size="icon">
+                          <Button variant="ghost" size="icon" onClick={() => setSelectedFarmer(farmer)}>
                             <Eye className="h-4 w-4" />
                           </Button>
                         </div>
@@ -493,6 +501,54 @@ const AdminDashboard = () => {
           )}
         </div>
       </div>
+
+      <Dialog open={!!selectedFarmer} onOpenChange={(open) => !open && setSelectedFarmer(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Farmer Details</DialogTitle>
+            <DialogDescription>
+              Information about the selected farmer.
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedFarmer && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-4">
+                <div className="h-16 w-16 rounded-full bg-gram-green-100 flex items-center justify-center text-3xl">
+                  👨‍🌾
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg">{selectedFarmer.name}</h3>
+                  <p className="text-muted-foreground">{selectedFarmer.email}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 text-sm mt-4">
+                <div>
+                  <p className="font-medium text-muted-foreground">Phone</p>
+                  <p>Not Available</p>
+                </div>
+                <div>
+                  <p className="font-medium text-muted-foreground">Status</p>
+                  <p className="capitalize text-green-600 font-medium">Approved</p>
+                </div>
+                <div>
+                  <p className="font-medium text-muted-foreground">Village</p>
+                  <p>{selectedFarmer.village || 'N/A'}</p>
+                </div>
+                <div>
+                  <p className="font-medium text-muted-foreground">State</p>
+                  <p>{selectedFarmer.state || 'N/A'}</p>
+                </div>
+                <div className="col-span-2">
+                  <p className="font-medium text-muted-foreground">Joined On</p>
+                  <p>{new Date(selectedFarmer.createdAt).toLocaleDateString()}</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 };
