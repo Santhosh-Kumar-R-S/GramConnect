@@ -464,7 +464,8 @@ const AdminDashboard = () => {
                             <p className="text-sm text-muted-foreground">{farmer.village}</p>
                           </div>
                         </div>
-                        <Button variant="ghost" size="sm">View</Button>
+
+                        <Button variant="ghost" size="sm" onClick={() => setSelectedFarmer(farmer)}>View</Button>
                       </div>
                     ))}
                   </div>
@@ -491,7 +492,7 @@ const AdminDashboard = () => {
                             <p className="text-sm text-muted-foreground">Consumer</p>
                           </div>
                         </div>
-                        <Button variant="ghost" size="sm">View</Button>
+                        <Button variant="ghost" size="sm" onClick={() => setSelectedFarmer(consumer)}>View</Button>
                       </div>
                     ))}
                   </div>
@@ -505,41 +506,48 @@ const AdminDashboard = () => {
       <Dialog open={!!selectedFarmer} onOpenChange={(open) => !open && setSelectedFarmer(null)}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Farmer Details</DialogTitle>
+            <DialogTitle>User Details</DialogTitle>
             <DialogDescription>
-              Information about the selected farmer.
+              Information about the selected account.
             </DialogDescription>
           </DialogHeader>
 
           {selectedFarmer && (
             <div className="space-y-4">
               <div className="flex items-center gap-4">
-                <div className="h-16 w-16 rounded-full bg-gram-green-100 flex items-center justify-center text-3xl">
-                  👨‍🌾
+                <div className={`h-16 w-16 rounded-full flex items-center justify-center text-3xl ${selectedFarmer.role === 'consumer' ? 'bg-accent/20' : 'bg-gram-green-100'}`}>
+                  {selectedFarmer.role === 'consumer' ? '🛒' : '👨‍🌾'}
                 </div>
                 <div>
                   <h3 className="font-bold text-lg">{selectedFarmer.name}</h3>
                   <p className="text-muted-foreground">{selectedFarmer.email}</p>
+                  <span className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">
+                    {selectedFarmer.role || 'Farmer'}
+                  </span>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4 text-sm mt-4">
                 <div>
                   <p className="font-medium text-muted-foreground">Phone</p>
-                  <p>Not Available</p>
+                  <p>{selectedFarmer.phone || 'Not Available'}</p>
                 </div>
                 <div>
                   <p className="font-medium text-muted-foreground">Status</p>
-                  <p className="capitalize text-green-600 font-medium">Approved</p>
+                  <p className="capitalize text-green-600 font-medium">{selectedFarmer.status || 'Approved'}</p>
                 </div>
-                <div>
-                  <p className="font-medium text-muted-foreground">Village</p>
-                  <p>{selectedFarmer.village || 'N/A'}</p>
-                </div>
-                <div>
-                  <p className="font-medium text-muted-foreground">State</p>
-                  <p>{selectedFarmer.state || 'N/A'}</p>
-                </div>
+                {(selectedFarmer.role !== 'consumer') && (
+                  <>
+                    <div>
+                      <p className="font-medium text-muted-foreground">Village</p>
+                      <p>{selectedFarmer.village || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <p className="font-medium text-muted-foreground">State</p>
+                      <p>{selectedFarmer.state || 'N/A'}</p>
+                    </div>
+                  </>
+                )}
                 <div className="col-span-2">
                   <p className="font-medium text-muted-foreground">Joined On</p>
                   <p>{new Date(selectedFarmer.createdAt).toLocaleDateString()}</p>
@@ -549,7 +557,7 @@ const AdminDashboard = () => {
           )}
         </DialogContent>
       </Dialog>
-    </Layout>
+    </Layout >
   );
 };
 
