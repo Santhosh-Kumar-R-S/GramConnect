@@ -153,15 +153,7 @@ const Login = () => {
             </Link>
           </p>
 
-          {/* Demo Credentials */}
-          <div className="mt-8 p-4 rounded-xl bg-muted/50 border border-border">
-            <p className="text-sm font-medium mb-2">Demo Accounts:</p>
-            <div className="space-y-1 text-sm text-muted-foreground">
-              <p>• farmer@demo.com → Farmer Dashboard</p>
-              <p>• consumer@demo.com → Consumer Dashboard</p>
-              <p>• admin@demo.com → Admin Dashboard</p>
-            </div>
-          </div>
+
         </motion.div>
       </div>
 
