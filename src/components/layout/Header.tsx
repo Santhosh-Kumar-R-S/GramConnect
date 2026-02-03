@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, ShoppingCart, User, Leaf } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -25,9 +25,12 @@ export const Header = () => {
     }
   }, [location]);
 
+  const navigate = useNavigate();
+
   const handleLogout = () => {
     localStorage.removeItem('userInfo');
     setUser(null);
+    navigate('/login');
   };
 
   return (

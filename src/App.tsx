@@ -13,6 +13,7 @@ import FarmerPending from "./pages/farmer/Pending";
 import ConsumerDashboard from "./pages/consumer/Dashboard";
 import AdminDashboard from "./pages/admin/Dashboard";
 import NotFound from "./pages/NotFound";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 import { CartProvider } from "./context/CartContext";
 
@@ -31,10 +32,13 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/cart" element={<Cart />} />
-            <Route path="/farmer/dashboard" element={<FarmerDashboard />} />
-            <Route path="/farmer/pending" element={<FarmerPending />} />
-            <Route path="/consumer/dashboard" element={<ConsumerDashboard />} />
-            <Route path="/admin/dashboard" element={<AdminDashboard />} />
+            {/* Protected Routes */}
+            <Route element={<ProtectedRoute />}>
+              <Route path="/farmer/dashboard" element={<FarmerDashboard />} />
+              <Route path="/farmer/pending" element={<FarmerPending />} />
+              <Route path="/consumer/dashboard" element={<ConsumerDashboard />} />
+              <Route path="/admin/dashboard" element={<AdminDashboard />} />
+            </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
