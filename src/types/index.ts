@@ -30,7 +30,7 @@ export interface Consumer extends User {
 }
 
 // Product Types
-export type ProductCategory = 
+export type ProductCategory =
   | 'vegetables'
   | 'fruits'
   | 'grains'
@@ -58,10 +58,11 @@ export interface Product {
 }
 
 // Order Types
-export type OrderStatus = 
+export type OrderStatus =
   | 'pending'
   | 'accepted'
   | 'processing'
+  | 'shipped'
   | 'delivered'
   | 'cancelled';
 

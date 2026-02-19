@@ -70,4 +70,41 @@ router.get('/', protect, async (req, res) => {
     }
 });
 
+// @desc    Update order status
+// @route   PUT /api/orders/:id/status
+// @access  Private (Farmer/Admin)
+router.put('/:id/status', protect, async (req, res) => {
+    try {
+        const { status } = req.body;
+        const validStatuses = ['pending', 'accepted', 'shipped', 'delivered', 'cancelled'];
+
+        if (!validStatuses.includes(status)) {
+            return res.status(400).json({ message: `Invalid status. Must be one of: ${validStatuses.join(', ')}` });
+        }
+
+        const order = await Order.findById(req.params.id);
+        if (!order) {
+            return res.status(404).json({ message: 'Order not found' });
+        }
+
+        // Allow if admin, or if farmer with items in this order
+        const isFarmerWithItems = req.user.role === 'farmer' &&
+            order.items.some(item => item.farmer.toString() === req.user._id.toString());
+
+        if (req.user.role !== 'admin' && !isFarmerWithItems) {
+            return res.status(403).json({ message: 'Not authorized to update this order' });
+        }
+
+        order.status = status;
+        if (status === 'delivered') {
+            order.deliveredAt = Date.now();
+        }
+
+        const updatedOrder = await order.save();
+        res.json(updatedOrder);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
 export default router;

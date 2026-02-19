@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger
 } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/use-toast';
 import { Product, Order, ProductCategory } from '@/types';
@@ -31,6 +31,7 @@ const FarmerDashboard = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [isAddProductOpen, setIsAddProductOpen] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const { toast } = useToast();
 
   // Form State
@@ -150,6 +151,31 @@ const FarmerDashboard = () => {
       }
     } catch (err) {
       toast({ title: "Error", description: "Something went wrong", variant: "destructive" });
+    }
+  };
+
+  const handleStatusUpdate = async (orderId: string, newStatus: string) => {
+    try {
+      const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+      const res = await fetch(`/api/orders/${orderId}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${userInfo.token}`
+        },
+        body: JSON.stringify({ status: newStatus })
+      });
+
+      if (res.ok) {
+        toast({ title: 'Status Updated', description: `Order marked as ${newStatus}` });
+        fetchData();
+        setSelectedOrder(null);
+      } else {
+        const error = await res.json();
+        toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      }
+    } catch (err) {
+      toast({ title: 'Error', description: 'Failed to update status', variant: 'destructive' });
     }
   };
 
@@ -400,7 +426,24 @@ const FarmerDashboard = () => {
                       </div>
                       <div className="flex flex-col items-end gap-2">
                         <span className="text-xl font-bold text-primary">₹{order.totalAmount}</span>
-                        <Button size="sm" variant="outline">View Details</Button>
+                        <div className="flex gap-2">
+                          {order.status === 'pending' && (
+                            <Button size="sm" className="bg-blue-600 hover:bg-blue-700" onClick={() => handleStatusUpdate(order.id, 'accepted')}>
+                              <Check className="h-3 w-3 mr-1" /> Accept
+                            </Button>
+                          )}
+                          {order.status === 'accepted' && (
+                            <Button size="sm" className="bg-amber-600 hover:bg-amber-700" onClick={() => handleStatusUpdate(order.id, 'shipped')}>
+                              <Truck className="h-3 w-3 mr-1" /> Ship
+                            </Button>
+                          )}
+                          {order.status === 'shipped' && (
+                            <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => handleStatusUpdate(order.id, 'delivered')}>
+                              <Check className="h-3 w-3 mr-1" /> Deliver
+                            </Button>
+                          )}
+                          <Button size="sm" variant="outline" onClick={() => setSelectedOrder(order)}>View Details</Button>
+                        </div>
                       </div>
                     </div>
                   </CardContent>
@@ -410,6 +453,66 @@ const FarmerDashboard = () => {
           )}
         </div>
       </div>
+
+      {/* Order Details Dialog */}
+      <Dialog open={!!selectedOrder} onOpenChange={(open) => { if (!open) setSelectedOrder(null); }}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Order Details</DialogTitle>
+            <DialogDescription>Full details for this order</DialogDescription>
+          </DialogHeader>
+          {selectedOrder && (
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Order #{selectedOrder.id}</span>
+                <span className={cn(
+                  "px-2 py-0.5 rounded-full text-xs font-medium",
+                  selectedOrder.status === 'pending' && "bg-amber-100 text-amber-700",
+                  selectedOrder.status === 'accepted' && "bg-blue-100 text-blue-700",
+                  selectedOrder.status === 'delivered' && "bg-green-100 text-green-700",
+                )}>
+                  {selectedOrder.status.charAt(0).toUpperCase() + selectedOrder.status.slice(1)}
+                </span>
+              </div>
+
+              <div className="space-y-2 p-3 rounded-lg bg-muted/50">
+                <div className="flex items-center gap-2">
+                  <ShoppingBag className="h-4 w-4 text-muted-foreground" />
+                  <span className="font-medium">{selectedOrder.consumerName}</span>
+                </div>
+                <p className="text-sm text-muted-foreground ml-6">{selectedOrder.deliveryAddress}</p>
+                {selectedOrder.contactPhone && selectedOrder.contactPhone !== 'N/A' && (
+                  <p className="text-sm text-muted-foreground ml-6">📞 {selectedOrder.contactPhone}</p>
+                )}
+              </div>
+
+              <div>
+                <h4 className="font-medium mb-2">Items Ordered</h4>
+                <div className="space-y-2">
+                  {selectedOrder.items.map((item, i) => (
+                    <div key={i} className="flex justify-between items-center p-2 border rounded-lg bg-white">
+                      <div>
+                        <p className="font-medium text-sm">{item.productName}</p>
+                        <p className="text-xs text-muted-foreground">{item.quantity} × ₹{item.pricePerUnit}</p>
+                      </div>
+                      <span className="font-semibold text-sm">₹{item.total}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex justify-between items-center pt-2 border-t">
+                <span className="font-medium">Total Amount</span>
+                <span className="text-xl font-bold text-primary">₹{selectedOrder.totalAmount}</span>
+              </div>
+
+              <p className="text-xs text-muted-foreground text-center">
+                Ordered on {selectedOrder.createdAt.toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' })}
+              </p>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 };

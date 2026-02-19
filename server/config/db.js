@@ -12,11 +12,18 @@ const connectDB = async () => {
     }
 
     if (!cached.promise) {
+        // Ensure the connection string has a database name
+        let uri = process.env.MONGO_URI;
+        if (uri && !uri.match(/\.mongodb\.net\/[a-zA-Z]/)) {
+            uri = uri.replace(/\.mongodb\.net\//, '.mongodb.net/gramconnect');
+        }
+
         const opts = {
             bufferCommands: false,
+            dbName: 'gramconnect',
         };
 
-        cached.promise = mongoose.connect(process.env.MONGO_URI, opts).then((mongoose) => {
+        cached.promise = mongoose.connect(uri, opts).then((mongoose) => {
             return mongoose;
         });
     }

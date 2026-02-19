@@ -474,7 +474,7 @@ const AdminDashboard = () => {
                           </div>
                         </div>
 
-                        <Button variant="ghost" size="sm" onClick={() => setSelectedFarmer(farmer)}>View</Button>
+                        <Button variant="ghost" size="sm" onClick={() => { console.log('Farmer clicked:', farmer); setSelectedFarmer(farmer); }}>View</Button>
                       </div>
                     ))}
                   </div>
@@ -501,7 +501,7 @@ const AdminDashboard = () => {
                             <p className="text-sm text-muted-foreground">Consumer</p>
                           </div>
                         </div>
-                        <Button variant="ghost" size="sm" onClick={() => setSelectedFarmer(consumer)}>View</Button>
+                        <Button variant="ghost" size="sm" onClick={() => { console.log('Consumer clicked:', consumer); setSelectedFarmer(consumer); }}>View</Button>
                       </div>
                     ))}
                   </div>
@@ -518,7 +518,7 @@ const AdminDashboard = () => {
           setViewingActivity(false);
         }
       }}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>{viewingActivity ? (selectedFarmer?.role === 'consumer' ? 'User Orders' : 'Farmer Crops') : 'User Details'}</DialogTitle>
             <DialogDescription>
@@ -601,18 +601,38 @@ const AdminDashboard = () => {
                   )
                 ) : (
                   products.filter(p => p.farmer?._id === selectedFarmer._id || p.farmer === selectedFarmer._id).length > 0 ? (
-                    products.filter(p => p.farmer?._id === selectedFarmer._id || p.farmer === selectedFarmer._id).map((product) => (
+                    products.filter(p => p.farmer?._id === selectedFarmer._id || p.farmer === selectedFarmer._id).map((product: any) => (
                       <div key={product._id} className="flex gap-3 p-3 border rounded-lg bg-muted/30">
-                        <div className="h-10 w-10 text-2xl flex items-center justify-center bg-white rounded-full">
-                          {/* Map category to icon roughly or use generic */}
-                          {categories.find(c => c.value === product.category)?.icon || '📦'}
+                        <div className="h-12 w-12 rounded-lg overflow-hidden flex-shrink-0 bg-muted flex items-center justify-center">
+                          {product.image && product.image !== '/placeholder.svg' ? (
+                            <img
+                              src={product.image}
+                              alt={product.name}
+                              className="h-full w-full object-cover"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).style.display = 'none';
+                              }}
+                            />
+                          ) : (
+                            <Package className="h-5 w-5 text-muted-foreground" />
+                          )}
                         </div>
-                        <div className="flex-1">
-                          <div className="flex justify-between">
-                            <h4 className="font-medium">{product.name}</h4>
-                            <span className="text-sm font-semibold">₹{product.pricePerUnit}/{product.unit}</span>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex justify-between items-start gap-2">
+                            <h4 className="font-medium truncate">{product.name}</h4>
+                            <span className="text-sm font-semibold whitespace-nowrap">₹{product.pricePerUnit}/{product.unit}</span>
                           </div>
                           <p className="text-xs text-muted-foreground capitalize">{product.category} • {product.quantityAvailable} {product.unit} avail.</p>
+                          <div className="flex gap-1 mt-1">
+                            {product.isOrganic && (
+                              <span className="text-[10px] px-1.5 py-0.5 bg-green-100 text-green-700 rounded-full">Organic</span>
+                            )}
+                            {product.isAvailable ? (
+                              <span className="text-[10px] px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded-full">In Stock</span>
+                            ) : (
+                              <span className="text-[10px] px-1.5 py-0.5 bg-red-100 text-red-700 rounded-full">Out of Stock</span>
+                            )}
+                          </div>
                         </div>
                       </div>
                     ))

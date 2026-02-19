@@ -1,5 +1,6 @@
 import express from 'express';
 import Product from '../models/Product.js';
+import User from '../models/User.js'; // Required for populate('farmer') to work
 import { protect, admin } from '../middleware/authMiddleware.js';
 
 const router = express.Router();

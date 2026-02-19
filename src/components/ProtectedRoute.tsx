@@ -1,14 +1,36 @@
 import { Navigate, Outlet } from 'react-router-dom';
 
-const ProtectedRoute = () => {
-    const userInfo = localStorage.getItem('userInfo');
+interface ProtectedRouteProps {
+    allowedRoles?: string[];
+}
+
+const ProtectedRoute = ({ allowedRoles }: ProtectedRouteProps) => {
+    const userInfoStr = localStorage.getItem('userInfo');
 
     // If no user info is found, redirect to login
-    if (!userInfo) {
+    if (!userInfoStr) {
         return <Navigate to="/login" replace />;
     }
 
-    // If user is authenticated, render the child routes
+    // If roles are specified, check the user's role
+    if (allowedRoles && allowedRoles.length > 0) {
+        try {
+            const userInfo = JSON.parse(userInfoStr);
+            if (!allowedRoles.includes(userInfo.role)) {
+                // Redirect to the correct dashboard based on their actual role
+                if (userInfo.role === 'farmer') {
+                    return <Navigate to="/farmer/dashboard" replace />;
+                } else if (userInfo.role === 'admin') {
+                    return <Navigate to="/admin/dashboard" replace />;
+                } else {
+                    return <Navigate to="/consumer/dashboard" replace />;
+                }
+            }
+        } catch {
+            return <Navigate to="/login" replace />;
+        }
+    }
+
     return <Outlet />;
 };
 

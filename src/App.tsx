@@ -32,11 +32,15 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/cart" element={<Cart />} />
-            {/* Protected Routes */}
-            <Route element={<ProtectedRoute />}>
+            {/* Protected Routes - Role-based */}
+            <Route element={<ProtectedRoute allowedRoles={['farmer']} />}>
               <Route path="/farmer/dashboard" element={<FarmerDashboard />} />
               <Route path="/farmer/pending" element={<FarmerPending />} />
+            </Route>
+            <Route element={<ProtectedRoute allowedRoles={['consumer']} />}>
               <Route path="/consumer/dashboard" element={<ConsumerDashboard />} />
+            </Route>
+            <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
               <Route path="/admin/dashboard" element={<AdminDashboard />} />
             </Route>
             <Route path="*" element={<NotFound />} />
