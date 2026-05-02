@@ -489,11 +489,14 @@ const FarmerDashboard = () => {
                           <span className="text-sm text-muted-foreground">Order #{order.id}</span>
                           <span className={cn(
                             "px-2 py-0.5 rounded-full text-xs font-medium",
-                            order.status === 'pending' && "bg-amber-100 text-amber-700",
-                            order.status === 'accepted' && "bg-blue-100 text-blue-700",
-                            order.status === 'delivered' && "bg-green-100 text-green-700",
+                            order.status === 'Pending' && "bg-amber-100 text-amber-700",
+                            order.status === 'Accepted' && "bg-blue-100 text-blue-700",
+                            order.status === 'Packed' && "bg-purple-100 text-purple-700",
+                            order.status === 'Shipped' && "bg-cyan-100 text-cyan-700",
+                            order.status === 'Delivered' && "bg-green-100 text-green-700",
+                            order.status === 'Rejected' && "bg-red-100 text-red-700",
                           )}>
-                            {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                            {order.status}
                           </span>
                         </div>
                         <h3 className="font-semibold">{order.consumerName}</h3>
@@ -509,19 +512,24 @@ const FarmerDashboard = () => {
                       </div>
                       <div className="flex flex-col items-end gap-2">
                         <span className="text-xl font-bold text-primary">₹{order.totalAmount}</span>
-                        <div className="flex gap-2">
-                          {order.status === 'pending' && (
-                            <Button size="sm" className="bg-blue-600 hover:bg-blue-700" onClick={() => handleStatusUpdate(order.id, 'accepted')}>
+                        <div className="flex gap-2 flex-wrap justify-end">
+                          {order.status === 'Pending' && (
+                            <Button size="sm" className="bg-blue-600 hover:bg-blue-700" onClick={() => handleStatusUpdate(order.id, 'Accepted')}>
                               <Check className="h-3 w-3 mr-1" /> Accept
                             </Button>
                           )}
-                          {order.status === 'accepted' && (
-                            <Button size="sm" className="bg-amber-600 hover:bg-amber-700" onClick={() => handleStatusUpdate(order.id, 'shipped')}>
+                          {order.status === 'Accepted' && (
+                            <Button size="sm" className="bg-purple-600 hover:bg-purple-700" onClick={() => handleStatusUpdate(order.id, 'Packed')}>
+                              📦 Pack
+                            </Button>
+                          )}
+                          {order.status === 'Packed' && (
+                            <Button size="sm" className="bg-amber-600 hover:bg-amber-700" onClick={() => handleStatusUpdate(order.id, 'Shipped')}>
                               <Truck className="h-3 w-3 mr-1" /> Ship
                             </Button>
                           )}
-                          {order.status === 'shipped' && (
-                            <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => handleStatusUpdate(order.id, 'delivered')}>
+                          {order.status === 'Shipped' && (
+                            <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => handleStatusUpdate(order.id, 'Delivered')}>
                               <Check className="h-3 w-3 mr-1" /> Deliver
                             </Button>
                           )}
@@ -584,7 +592,7 @@ const FarmerDashboard = () => {
                             <Button size="sm" variant="destructive" onClick={() => handleNegotiationUpdate(neg._id, 'REJECTED')}>
                               <X className="h-4 w-4 mr-1" /> Reject
                             </Button>
-                            <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => handleNegotiationUpdate(neg._id, 'ACCEPTED')}>
+                            <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => handleNegotiationUpdate(neg._id, 'Accepted')}>
                               <Check className="h-4 w-4 mr-1" /> Accept
                             </Button>
                           </div>
@@ -617,11 +625,14 @@ const FarmerDashboard = () => {
                 <span className="text-sm text-muted-foreground">Order #{selectedOrder.id}</span>
                 <span className={cn(
                   "px-2 py-0.5 rounded-full text-xs font-medium",
-                  selectedOrder.status === 'pending' && "bg-amber-100 text-amber-700",
-                  selectedOrder.status === 'accepted' && "bg-blue-100 text-blue-700",
-                  selectedOrder.status === 'delivered' && "bg-green-100 text-green-700",
+                  selectedOrder.status === 'Pending' && "bg-amber-100 text-amber-700",
+                  selectedOrder.status === 'Accepted' && "bg-blue-100 text-blue-700",
+                  selectedOrder.status === 'Packed' && "bg-purple-100 text-purple-700",
+                  selectedOrder.status === 'Shipped' && "bg-cyan-100 text-cyan-700",
+                  selectedOrder.status === 'Delivered' && "bg-green-100 text-green-700",
+                  selectedOrder.status === 'Rejected' && "bg-red-100 text-red-700",
                 )}>
-                  {selectedOrder.status.charAt(0).toUpperCase() + selectedOrder.status.slice(1)}
+                  {selectedOrder.status}
                 </span>
               </div>
 

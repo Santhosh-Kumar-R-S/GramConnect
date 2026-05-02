@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { useCart } from '@/context/CartContext';
 import { useToast } from '@/components/ui/use-toast';
+import { DeliverySlotPicker } from '@/components/checkout/DeliverySlotPicker';
 import { ProductCategory } from '@/types';
 
 // Razorpay Script Loader
@@ -36,7 +37,9 @@ const Cart = () => {
   const { cartItems, updateQuantity, removeFromCart, clearCart } = useCart();
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [contactPhone, setContactPhone] = useState('');
+  const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
   const { toast } = useToast();
+  const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
 
   const subtotal = cartItems.reduce((sum, item) => sum + (item.product.pricePerUnit * item.quantity), 0);
   const deliveryFee = subtotal > 500 ? 0 : 50;
@@ -73,6 +76,7 @@ const Cart = () => {
         body: JSON.stringify({
           items: orderItems,
           totalAmount: total,
+          deliverySlotId: selectedSlotId || undefined,
           shippingAddress: {
             address: deliveryAddress,
             city: 'Unknown',
@@ -309,13 +313,20 @@ const Cart = () => {
                         value={contactPhone}
                         onChange={(e) => setContactPhone(e.target.value)}
                       />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+                     </div>
+                     <div className="pt-2 border-t border-border">
+                       <DeliverySlotPicker
+                         selectedSlotId={selectedSlotId}
+                         onSelect={setSelectedSlotId}
+                         token={userInfo.token || ""}
+                       />
+                     </div>
+                   </div>
+                 </CardContent>
+               </Card>
+             </div>
 
-            {/* Order Summary */}
+             {/* Order Summary */}
             <div>
               <Card className="sticky top-24">
                 <CardContent className="p-6">

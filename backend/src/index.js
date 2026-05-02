@@ -12,6 +12,7 @@ import wishlistRoutes from "./routes/wishlistRoutes.js";
 import negotiationRoutes from "./routes/negotiationRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
 import orderRoutes from "./routes/orderRoutes.js";
+import slotRoutes from "./routes/slotRoutes.js";
 import { notFound, errorHandler } from "./middleware/errorMiddleware.js";
 
 dotenv.config();
@@ -38,6 +39,7 @@ app.use("/api/wishlist", wishlistRoutes);
 app.use("/api/negotiations", negotiationRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/orders", orderRoutes);
+app.use("/api/slots", slotRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

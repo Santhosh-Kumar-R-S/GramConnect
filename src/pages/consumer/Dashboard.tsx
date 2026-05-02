@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   ShoppingBag, Package, MapPin, Clock,
-  ArrowRight, Star, Heart, Handshake
+  ArrowRight, Star, Heart, Handshake, ChevronDown, ChevronUp
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
@@ -11,6 +11,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { Product, Order, ProductCategory } from '@/types';
 import { useCart } from '@/context/CartContext';
+import { OrderTimeline } from '@/components/orders/OrderTimeline';
 
 // Categories Configuration
 const categories: { value: ProductCategory; label: string; icon: string }[] = [
@@ -29,6 +30,16 @@ const ConsumerDashboard = () => {
   const [consumerOrders, setConsumerOrders] = useState<Order[]>([]);
   const [recentProducts, setRecentProducts] = useState<Product[]>([]);
   const [negotiations, setNegotiations] = useState<any[]>([]);
+  const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
+
+  const toggleOrderExpand = (orderId: string) => {
+    setExpandedOrders(prev => {
+      const next = new Set(prev);
+      if (next.has(orderId)) next.delete(orderId);
+      else next.add(orderId);
+      return next;
+    });
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -57,6 +68,7 @@ const ConsumerDashboard = () => {
               })),
               totalAmount: o.totalAmount,
               status: o.status,
+              statusHistory: o.statusHistory || [],
               deliveryAddress: o.shippingAddress?.address || 'N/A',
               contactPhone: 'N/A',
               createdAt: new Date(o.createdAt),
@@ -150,7 +162,7 @@ const ConsumerDashboard = () => {
               <Card>
                 <CardContent className="p-4 text-center">
                   <Clock className="h-8 w-8 text-amber-500 mx-auto mb-2" />
-                  <p className="text-2xl font-bold">{consumerOrders.filter(o => o.status === 'pending').length}</p>
+                  <p className="text-2xl font-bold">{consumerOrders.filter(o => o.status === 'Pending').length}</p>
                   <p className="text-sm text-muted-foreground">In Progress</p>
                 </CardContent>
               </Card>
@@ -209,8 +221,10 @@ const ConsumerDashboard = () => {
                 <>
                   <div className="flex items-center justify-between mb-4">
                     <h2 className="text-xl font-semibold">Recent Orders</h2>
-                    <Button variant="ghost" size="sm">
-                      View All <ArrowRight className="ml-1 h-4 w-4" />
+                    <Button variant="ghost" size="sm" asChild>
+                      <Link to="/consumer/orders">
+                        View All <ArrowRight className="ml-1 h-4 w-4" />
+                      </Link>
                     </Button>
                   </div>
 
@@ -230,11 +244,14 @@ const ConsumerDashboard = () => {
                               <span className="text-sm font-medium">Order #{order.id}</span>
                               <span className={cn(
                                 "px-2 py-0.5 rounded-full text-xs font-medium",
-                                order.status === 'pending' && "bg-amber-100 text-amber-700",
-                                order.status === 'accepted' && "bg-blue-100 text-blue-700",
-                                order.status === 'delivered' && "bg-green-100 text-green-700",
+                                order.status === 'Pending'   && "bg-amber-100 text-amber-700",
+                                order.status === 'Accepted'  && "bg-blue-100 text-blue-700",
+                                order.status === 'Packed'    && "bg-purple-100 text-purple-700",
+                                order.status === 'Shipped'   && "bg-cyan-100 text-cyan-700",
+                                order.status === 'Delivered' && "bg-green-100 text-green-700",
+                                order.status === 'Rejected'  && "bg-red-100 text-red-700",
                               )}>
-                                {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                                {order.status}
                               </span>
                             </div>
 
@@ -267,39 +284,41 @@ const ConsumerDashboard = () => {
                           </div>
                         </div>
 
-                        {/* Order Progress */}
-                        {order.status !== 'delivered' && order.status !== 'cancelled' && (
-                          <div className="mt-4 pt-4 border-t border-border">
-                            <div className="flex items-center justify-between text-sm">
-                              <div className={cn(
-                                "flex items-center gap-2",
-                                order.status === 'pending' ? "text-primary" : "text-muted-foreground"
-                              )}>
-                                <div className={cn(
-                                  "h-3 w-3 rounded-full",
-                                  order.status === 'pending' ? "bg-primary animate-pulse" : "bg-green-500"
-                                )} />
-                                Pending
-                              </div>
-                              <div className="flex-1 h-0.5 mx-2 bg-muted" />
-                              <div className={cn(
-                                "flex items-center gap-2",
-                                order.status === 'accepted' ? "text-primary" : "text-muted-foreground"
-                              )}>
-                                <div className={cn(
-                                  "h-3 w-3 rounded-full",
-                                  order.status === 'accepted' ? "bg-primary animate-pulse" : "bg-muted"
-                                )} />
-                                Accepted
-                              </div>
-                              <div className="flex-1 h-0.5 mx-2 bg-muted" />
-                              <div className="flex items-center gap-2 text-muted-foreground">
-                                <div className="h-3 w-3 rounded-full bg-muted" />
-                                Delivered
-                              </div>
+                        {/* Order Status — collapsible timeline */}
+                        <div className="mt-3 pt-3 border-t border-border">
+                          {/* Current status row + expand toggle */}
+                          <button
+                            type="button"
+                            onClick={() => toggleOrderExpand(order.id)}
+                            className="w-full flex items-center justify-between text-sm hover:bg-muted/50 rounded-lg px-2 py-1.5 transition-colors"
+                          >
+                            <span className="flex items-center gap-2 font-medium">
+                              <span className={cn(
+                                "h-2.5 w-2.5 rounded-full",
+                                order.status === 'Pending'   && "bg-amber-400",
+                                order.status === 'Accepted'  && "bg-blue-400",
+                                order.status === 'Packed'    && "bg-purple-400",
+                                order.status === 'Shipped'   && "bg-cyan-400",
+                                order.status === 'Delivered' && "bg-green-500",
+                                order.status === 'Rejected'  && "bg-red-400",
+                              )} />
+                              {order.status}
+                            </span>
+                            {expandedOrders.has(order.id)
+                              ? <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                              : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+                          </button>
+
+                          {/* Full timeline — visible only when expanded */}
+                          {expandedOrders.has(order.id) && (
+                            <div className="mt-2">
+                              <OrderTimeline
+                                currentStatus={order.status}
+                                statusHistory={(order as any).statusHistory || []}
+                              />
                             </div>
-                          </div>
-                        )}
+                          )}
+                        </div>
                       </CardContent>
                     </Card>
                   </motion.div>

@@ -17,11 +17,25 @@ const orderItemSchema = new mongoose.Schema(
     quantity: Number,
     status: {
       type: String,
-      enum: ["Pending", "Accepted", "Shipped", "Delivered", "Rejected"],
+      enum: ["Pending", "Accepted", "Packed", "Shipped", "Delivered", "Rejected"],
       default: "Pending"
     }
   },
   { _id: true }
+);
+
+const statusHistorySchema = new mongoose.Schema(
+  {
+    status: {
+      type: String,
+      enum: ["Pending", "Accepted", "Packed", "Shipped", "Delivered", "Rejected"],
+      required: true
+    },
+    timestamp: { type: Date, default: Date.now },
+    note: { type: String },
+    updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" }
+  },
+  { _id: false }
 );
 
 const orderSchema = new mongoose.Schema(
@@ -38,12 +52,17 @@ const orderSchema = new mongoose.Schema(
     },
     paymentMethod: {
       type: String,
-      default: "Cash on Delivery"
+      default: "Razorpay"
     },
     status: {
       type: String,
-      enum: ["Pending", "Accepted", "Shipped", "Delivered", "Rejected"],
+      enum: ["Pending", "Accepted", "Packed", "Shipped", "Delivered", "Rejected"],
       default: "Pending"
+    },
+    statusHistory: [statusHistorySchema],
+    deliverySlot: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "DeliverySlot"
     },
     razorpayOrderId: String,
     razorpayPaymentId: String,
