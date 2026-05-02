@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   Package, Plus, ShoppingBag, TrendingUp, Clock,
-  Check, Truck, Edit, Trash2, Eye
+  Check, Truck, Edit, Trash2, Eye, Handshake, X
 } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
@@ -27,10 +28,12 @@ const categoriesList: { value: ProductCategory; label: string; icon: string }[] 
 ];
 
 const FarmerDashboard = () => {
-  const [activeTab, setActiveTab] = useState<'products' | 'orders'>('products');
+  const [activeTab, setActiveTab] = useState<'products' | 'orders' | 'negotiations'>('products');
   const [products, setProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [negotiations, setNegotiations] = useState<any[]>([]);
   const [isAddProductOpen, setIsAddProductOpen] = useState(false);
+  const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const { toast } = useToast();
 
@@ -55,39 +58,28 @@ const FarmerDashboard = () => {
       const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
       if (!userInfo.token) return;
 
-      // Fetch Products - In a real app, this endpoint would filter by logged-in farmer
-      // For MVP, assuming GET /api/products returns all, we might need a specific 'my-products' endpoint 
-      // or filter on client if backend doesn't support it yet.
-      // Actually, let's just fetch all and filter client side for now if needed, 
-      // OR better, assuming the backend could easily have a /api/products/myproducts.
-      // Given current backend implementation:
-      // router.post('/', protect ...) for creation
-      // router.get('/') for all
-      // We'll use get all and filter by farmer ID from token (decoded) or user info.
-
-      const productRes = await fetch('/api/products', {
+      // Fetch Farmer's Products using the specific endpoint
+      const productRes = await fetch('/api/products/farmer', {
         headers: { Authorization: `Bearer ${userInfo.token}` }
       });
       const productData = await productRes.json();
 
       if (productRes.ok) {
-        // Filter locally for now as the 'GET /' is public and returns all. 
-        // Ideally backend should have 'my-products'
-        const myProducts = productData.filter((p: any) => p.farmer._id === userInfo._id).map((p: any) => ({
+        const myProducts = productData.map((p: any) => ({
           id: p._id,
           name: p.name,
           category: p.category,
           description: p.description,
-          pricePerUnit: p.pricePerUnit,
+          pricePerUnit: p.price || p.pricePerUnit,
           unit: p.unit,
-          quantityAvailable: p.quantityAvailable,
+          quantityAvailable: p.quantity || p.quantityAvailable,
           harvestDate: new Date(p.harvestDate),
           images: [],
           isOrganic: p.isOrganic,
           isAvailable: p.isAvailable,
-          farmerId: p.farmer._id,
-          farmerName: p.farmer.name,
-          farmerVillage: p.farmer.village
+          farmerId: userInfo.user?.id,
+          farmerName: userInfo.user?.name,
+          farmerVillage: userInfo.user?.village || ''
         }));
         setProducts(myProducts);
       }
@@ -112,11 +104,20 @@ const FarmerDashboard = () => {
           })),
           totalAmount: o.totalAmount,
           status: o.status,
-          deliveryAddress: o.shippingAddress.address,
+          deliveryAddress: o.shippingAddress?.address || 'N/A',
           contactPhone: 'N/A', // Schema separation
           createdAt: new Date(o.createdAt),
           updatedAt: new Date(o.updatedAt)
         })));
+      }
+
+      // Fetch Negotiations
+      const negRes = await fetch('/api/negotiations', {
+        headers: { Authorization: `Bearer ${userInfo.token}` }
+      });
+      const negData = await negRes.json();
+      if (negRes.ok) {
+        setNegotiations(negData);
       }
 
     } catch (error) {
@@ -128,13 +129,19 @@ const FarmerDashboard = () => {
     e.preventDefault();
     try {
       const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+      const payload = {
+        ...newProduct,
+        price: Number(newProduct.pricePerUnit),
+        quantity: Number(newProduct.quantityAvailable)
+      };
+
       const res = await fetch('/api/products', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${userInfo.token}`
         },
-        body: JSON.stringify(newProduct)
+        body: JSON.stringify(payload)
       });
 
       if (res.ok) {
@@ -151,6 +158,42 @@ const FarmerDashboard = () => {
       }
     } catch (err) {
       toast({ title: "Error", description: "Something went wrong", variant: "destructive" });
+    }
+  };
+
+  const handleEditProduct = (product: Product) => {
+    setNewProduct({
+      name: product.name,
+      category: product.category as any,
+      unit: product.unit,
+      pricePerUnit: product.pricePerUnit.toString() as any,
+      quantityAvailable: product.quantityAvailable.toString() as any,
+      harvestDate: product.harvestDate ? new Date(product.harvestDate).toISOString().split('T')[0] : '',
+      description: product.description || '',
+      isOrganic: product.isOrganic || false
+    });
+    setEditingProductId(product.id);
+    setIsAddProductOpen(true);
+  };
+
+  const handleDeleteProduct = async (id: string) => {
+    if (!window.confirm("Are you sure you want to delete this product?")) return;
+    try {
+      const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+      const res = await fetch(`/api/products/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${userInfo.token}` }
+      });
+
+      if (res.ok) {
+        toast({ title: 'Deleted', description: 'Product has been deleted.' });
+        fetchData();
+      } else {
+        const err = await res.json();
+        toast({ title: 'Error', description: err.message, variant: 'destructive' });
+      }
+    } catch (error) {
+      toast({ title: 'Error', description: 'Failed to delete product', variant: 'destructive' });
     }
   };
 
@@ -176,6 +219,30 @@ const FarmerDashboard = () => {
       }
     } catch (err) {
       toast({ title: 'Error', description: 'Failed to update status', variant: 'destructive' });
+    }
+  };
+
+  const handleNegotiationUpdate = async (negId: string, status: string) => {
+    try {
+      const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+      const res = await fetch(`/api/negotiations/${negId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${userInfo.token}`
+        },
+        body: JSON.stringify({ status })
+      });
+
+      if (res.ok) {
+        toast({ title: 'Negotiation Updated', description: `Marked as ${status}` });
+        fetchData();
+      } else {
+        const error = await res.json();
+        toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      }
+    } catch (err) {
+      toast({ title: 'Error', description: 'Failed to update negotiation', variant: 'destructive' });
     }
   };
 
@@ -206,7 +273,7 @@ const FarmerDashboard = () => {
                 </DialogTrigger>
                 <DialogContent className="max-w-lg">
                   <DialogHeader>
-                    <DialogTitle>Add New Product</DialogTitle>
+                    <DialogTitle>{editingProductId ? 'Edit Product' : 'Add New Product'}</DialogTitle>
                   </DialogHeader>
                   <form onSubmit={handleAddProduct} className="space-y-4 pt-4">
                     <div className="space-y-2">
@@ -295,7 +362,9 @@ const FarmerDashboard = () => {
                       />
                       <Label htmlFor="organic" className="text-sm font-normal">This is an organic product</Label>
                     </div>
-                    <Button type="submit" className="w-full">Add Product</Button>
+                    <Button type="submit" className="w-full">
+                      {editingProductId ? 'Update Product' : 'Add Product'}
+                    </Button>
                   </form>
                 </DialogContent>
               </Dialog>
@@ -346,6 +415,18 @@ const FarmerDashboard = () => {
               <ShoppingBag className="h-4 w-4 mr-2" />
               Orders
             </Button>
+            <Button
+              variant={activeTab === 'negotiations' ? 'default' : 'outline'}
+              onClick={() => setActiveTab('negotiations')}
+            >
+              <Handshake className="h-4 w-4 mr-2" />
+              Negotiations
+              {negotiations.filter(n => n.status === 'PENDING').length > 0 && (
+                <span className="ml-2 bg-destructive text-destructive-foreground px-1.5 py-0.5 rounded-full text-xs">
+                  {negotiations.filter(n => n.status === 'PENDING').length}
+                </span>
+              )}
+            </Button>
           </div>
 
           {/* Products Tab */}
@@ -373,13 +454,15 @@ const FarmerDashboard = () => {
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="icon">
-                          <Eye className="h-4 w-4" />
+                        <Button variant="ghost" size="icon" asChild>
+                          <Link to={`/products?search=${product.name}`}>
+                            <Eye className="h-4 w-4" />
+                          </Link>
                         </Button>
-                        <Button variant="ghost" size="icon">
+                        <Button variant="ghost" size="icon" onClick={() => handleEditProduct(product)}>
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="text-destructive">
+                        <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDeleteProduct(product.id)}>
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
@@ -444,6 +527,73 @@ const FarmerDashboard = () => {
                           )}
                           <Button size="sm" variant="outline" onClick={() => setSelectedOrder(order)}>View Details</Button>
                         </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </motion.div>
+          )}
+
+          {/* Negotiations Tab */}
+          {activeTab === 'negotiations' && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="grid gap-4"
+            >
+              {negotiations.length === 0 ? <p className="text-muted-foreground">No negotiation requests yet.</p> : negotiations.map((neg) => (
+                <Card key={neg._id}>
+                  <CardContent className="p-4">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                      <div>
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-sm text-muted-foreground">Consumer: {neg.consumer?.name}</span>
+                          <span className={cn(
+                            "px-2 py-0.5 rounded-full text-xs font-medium",
+                            neg.status === 'PENDING' && "bg-amber-100 text-amber-700",
+                            neg.status === 'ACCEPTED' && "bg-green-100 text-green-700",
+                            neg.status === 'REJECTED' && "bg-red-100 text-red-700",
+                            neg.status === 'EXPIRED' && "bg-gray-100 text-gray-700"
+                          )}>
+                            {neg.status}
+                          </span>
+                        </div>
+                        <h3 className="font-semibold">{neg.product?.name}</h3>
+                        
+                        <div className="mt-4 grid grid-cols-2 gap-4 text-sm bg-muted/50 p-3 rounded-lg">
+                          <div>
+                            <p className="text-muted-foreground">Requested Quantity</p>
+                            <p className="font-medium">{neg.quantity} {neg.product?.unit}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">Offered Price</p>
+                            <p className="font-bold text-primary">₹{neg.requestedPrice}/{neg.product?.unit}</p>
+                            <p className="text-xs text-muted-foreground line-through">Original: ₹{neg.product?.pricePerUnit}/{neg.product?.unit}</p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="flex flex-col items-end gap-2 mt-4 md:mt-0">
+                        <span className="text-xl font-bold text-primary">
+                          Total: ₹{(neg.quantity * neg.requestedPrice).toLocaleString()}
+                        </span>
+                        
+                        {neg.status === 'PENDING' && (
+                          <div className="flex gap-2 mt-2">
+                            <Button size="sm" variant="destructive" onClick={() => handleNegotiationUpdate(neg._id, 'REJECTED')}>
+                              <X className="h-4 w-4 mr-1" /> Reject
+                            </Button>
+                            <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => handleNegotiationUpdate(neg._id, 'ACCEPTED')}>
+                              <Check className="h-4 w-4 mr-1" /> Accept
+                            </Button>
+                          </div>
+                        )}
+                        {neg.status === 'ACCEPTED' && (
+                          <p className="text-sm text-muted-foreground mt-2">
+                            Awaiting consumer checkout. Valid for 7 days.
+                          </p>
+                        )}
                       </div>
                     </div>
                   </CardContent>

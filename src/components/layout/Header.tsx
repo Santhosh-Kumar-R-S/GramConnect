@@ -4,6 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, ShoppingCart, User, Leaf } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { NotificationBell } from '@/components/notifications/NotificationBell';
+import { useCart } from '@/context/CartContext';
 
 const navLinks = [
   { href: '/', label: 'Home' },
@@ -15,6 +17,7 @@ export const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [user, setUser] = useState<any>(null);
   const location = useLocation();
+  const { cartCount } = useCart();
 
   useEffect(() => {
     const userInfo = localStorage.getItem('userInfo');
@@ -46,7 +49,12 @@ export const Header = () => {
 
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center gap-8">
-          {navLinks.map((link) => (
+          {navLinks
+            .filter((link) => {
+              if (link.label === 'About' && user?.user?.role === 'admin') return false;
+              return true;
+            })
+            .map((link) => (
             <Link
               key={link.href}
               to={link.href}
@@ -64,16 +72,29 @@ export const Header = () => {
 
         {/* Desktop Actions */}
         <div className="hidden md:flex items-center gap-3">
-          <Button variant="ghost" size="icon" asChild>
-            <Link to="/cart">
-              <ShoppingCart className="h-5 w-5" />
-            </Link>
-          </Button>
+          {user?.user?.role !== 'admin' && (
+            <Button variant="ghost" size="icon" asChild className="relative">
+              <Link to="/cart">
+                <ShoppingCart className="h-5 w-5" />
+                {cartCount > 0 && (
+                  <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
+                    {cartCount}
+                  </span>
+                )}
+              </Link>
+            </Button>
+          )}
+          <NotificationBell />
           {user ? (
             <div className="flex items-center gap-3">
               <span className="text-sm font-medium hidden lg:inline-block">
-                Hi, {user.name.split(' ')[0]}
+                Hi, {(user?.user?.name || user?.name || 'User').split(' ')[0]}
               </span>
+              {user?.user?.role && (
+                <Button variant="ghost" asChild>
+                  <Link to={`/${user.user.role}/dashboard`}>Dashboard</Link>
+                </Button>
+              )}
               <Button variant="outline" onClick={handleLogout}>
                 Logout
               </Button>

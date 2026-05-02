@@ -37,9 +37,9 @@ const Login = () => {
           description: "Welcome back to GramConnect!",
         });
 
-        if (data.role === 'farmer') {
+        if (data.user.role === 'farmer') {
           navigate('/farmer/dashboard');
-        } else if (data.role === 'admin') {
+        } else if (data.user.role === 'admin') {
           navigate('/admin/dashboard');
         } else {
           navigate('/consumer/dashboard');

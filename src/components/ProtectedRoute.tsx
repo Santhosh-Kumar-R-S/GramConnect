@@ -16,11 +16,13 @@ const ProtectedRoute = ({ allowedRoles }: ProtectedRouteProps) => {
     if (allowedRoles && allowedRoles.length > 0) {
         try {
             const userInfo = JSON.parse(userInfoStr);
-            if (!allowedRoles.includes(userInfo.role)) {
+            const userRole = userInfo?.user?.role || userInfo?.role;
+            
+            if (!allowedRoles.includes(userRole)) {
                 // Redirect to the correct dashboard based on their actual role
-                if (userInfo.role === 'farmer') {
+                if (userRole === 'farmer') {
                     return <Navigate to="/farmer/dashboard" replace />;
-                } else if (userInfo.role === 'admin') {
+                } else if (userRole === 'admin') {
                     return <Navigate to="/admin/dashboard" replace />;
                 } else {
                     return <Navigate to="/consumer/dashboard" replace />;

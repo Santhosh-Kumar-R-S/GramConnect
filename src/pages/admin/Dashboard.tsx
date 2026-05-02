@@ -4,6 +4,7 @@ import {
   Users, ShoppingBag, Package, TrendingUp,
   CheckCircle, XCircle, Clock, Eye, UserCheck, UserX
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -67,8 +68,8 @@ const AdminDashboard = () => {
   const updateStatus = async (id: string, status: string) => {
     try {
       const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
-      const response = await fetch(`/api/admin/users/${id}/status`, {
-        method: 'PUT',
+      const response = await fetch(`/api/admin/farmers/${id}/approval`, {
+        method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${userInfo.token}`,
@@ -156,13 +157,18 @@ const AdminDashboard = () => {
         <div className="bg-card border-b border-border">
           <div className="container py-6">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div>
-                <h1 className="text-2xl font-bold">Admin Dashboard</h1>
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-2">
+                  <h1 className="text-2xl font-bold">Admin Dashboard</h1>
+                </div>
                 <p className="text-muted-foreground">Manage GramConnect platform</p>
+                <Link to="/" className="text-sm text-primary hover:underline flex items-center gap-1 mt-1">
+                  &larr; Back to Home
+                </Link>
               </div>
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-100 text-amber-700 text-sm">
                 <Clock className="h-4 w-4" />
-                <span>{pendingApprovals.length} pending approvals</span>
+                <span>{pendingApprovals.length} farmers awaiting approval</span>
               </div>
             </div>
           </div>

@@ -7,7 +7,19 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { useCart } from '@/context/CartContext';
+import { useToast } from '@/components/ui/use-toast';
 import { ProductCategory } from '@/types';
+
+// Razorpay Script Loader
+const loadScript = (src: string) => {
+  return new Promise((resolve) => {
+    const script = document.createElement('script');
+    script.src = src;
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+};
 
 // Categories Configuration
 const categories: { value: ProductCategory; label: string; icon: string }[] = [
@@ -24,6 +36,7 @@ const Cart = () => {
   const { cartItems, updateQuantity, removeFromCart, clearCart } = useCart();
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [contactPhone, setContactPhone] = useState('');
+  const { toast } = useToast();
 
   const subtotal = cartItems.reduce((sum, item) => sum + (item.product.pricePerUnit * item.quantity), 0);
   const deliveryFee = subtotal > 500 ? 0 : 50;
@@ -31,17 +44,18 @@ const Cart = () => {
 
   const handlePlaceOrder = async () => {
     if (!deliveryAddress || !contactPhone) {
-      alert('Please fill in delivery details');
+      toast({ title: 'Error', description: 'Please fill in delivery details', variant: 'destructive' });
       return;
     }
 
     try {
       const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
       if (!userInfo.token) {
-        alert('Please login to place an order');
+        toast({ title: 'Error', description: 'Please login to place an order', variant: 'destructive' });
         return;
       }
 
+      // 1. Create Order in Backend
       const orderItems = cartItems.map(item => ({
         product: item.product.id,
         name: item.product.name,
@@ -50,7 +64,7 @@ const Cart = () => {
         farmer: item.product.farmerId
       }));
 
-      const res = await fetch('/api/orders', {
+      const orderRes = await fetch('/api/orders', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -68,18 +82,97 @@ const Cart = () => {
         }),
       });
 
-      if (res.ok) {
-        alert('Order placed successfully!');
+      if (!orderRes.ok) {
+        throw new Error('Failed to create order');
+      }
+
+      const order = await orderRes.json();
+
+      // 2. Load Razorpay SDK
+      const res = await loadScript('https://checkout.razorpay.com/v1/checkout.js');
+      if (!res) {
+        toast({ title: 'Error', description: 'Razorpay SDK failed to load', variant: 'destructive' });
+        return;
+      }
+
+      // 3. Create Razorpay Order
+      const rzpOrderRes = await fetch('/api/payments/create-order', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${userInfo.token}`,
+        },
+        body: JSON.stringify({ orderId: order._id }),
+      });
+
+      if (!rzpOrderRes.ok) {
+        throw new Error('Failed to initialize payment');
+      }
+
+      const rzpOrder = await rzpOrderRes.json();
+
+      // 4a. Test Mode — simulate payment without opening Razorpay modal
+      if (rzpOrder._testMode) {
+        toast({ title: '✅ Order Placed!', description: 'Your order has been confirmed successfully. (Demo Mode)' });
         clearCart();
         setDeliveryAddress('');
         setContactPhone('');
-      } else {
-        const err = await res.json();
-        alert(`Order failed: ${err.message}`);
+        return;
       }
-    } catch (error) {
+
+      // 4b. Production — open real Razorpay modal
+      const options = {
+        key: "rzp_test_SkboVnjJ83LdEp",
+        amount: rzpOrder.amount,
+        currency: rzpOrder.currency,
+        name: "GramConnect",
+        description: "Fresh produce directly from farmers",
+        order_id: rzpOrder.id,
+        handler: async function (response: any) {
+          // 5. Verify Payment
+          try {
+            const verifyRes = await fetch('/api/payments/verify', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${userInfo.token}`,
+              },
+              body: JSON.stringify({
+                orderId: order._id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_signature: response.razorpay_signature,
+              }),
+            });
+
+            if (verifyRes.ok) {
+              toast({ title: 'Success', description: 'Payment successful! Order placed.' });
+              clearCart();
+              setDeliveryAddress('');
+              setContactPhone('');
+            } else {
+              toast({ title: 'Error', description: 'Payment verification failed', variant: 'destructive' });
+            }
+          } catch (error) {
+            toast({ title: 'Error', description: 'Failed to verify payment', variant: 'destructive' });
+          }
+        },
+        prefill: {
+          name: userInfo.name,
+          email: userInfo.email,
+          contact: contactPhone,
+        },
+        theme: {
+          color: "#16a34a",
+        },
+      };
+
+      const paymentObject = new (window as any).Razorpay(options);
+      paymentObject.open();
+
+    } catch (error: any) {
       console.error(error);
-      alert('Something went wrong');
+      toast({ title: 'Error', description: error.message || 'Something went wrong', variant: 'destructive' });
     }
   };
 
@@ -256,7 +349,7 @@ const Cart = () => {
                   </Button>
 
                   <p className="text-xs text-muted-foreground text-center mt-4">
-                    Payment: Cash on Delivery
+                    Payment: Securely via Razorpay
                   </p>
                 </CardContent>
               </Card>

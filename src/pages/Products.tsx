@@ -60,13 +60,13 @@ const Products = () => {
             id: p._id,
             farmerId: p.farmer._id,
             farmerName: p.farmer.name,
-            farmerVillage: `${p.farmer.village}, ${p.farmer.state}`,
+            farmerVillage: p.farmer.village,
             name: p.name,
             category: p.category,
             description: p.description,
-            pricePerUnit: p.pricePerUnit,
+            pricePerUnit: p.price || p.pricePerUnit,
             unit: p.unit,
-            quantityAvailable: p.quantityAvailable,
+            quantityAvailable: p.quantity || p.quantityAvailable,
             harvestDate: new Date(p.harvestDate),
             images: [],
             isOrganic: p.isOrganic,
@@ -97,7 +97,8 @@ const Products = () => {
       else if (priceRange === 'mid') matchesPrice = product.pricePerUnit > 50 && product.pricePerUnit <= 100;
       else if (priceRange === 'high') matchesPrice = product.pricePerUnit > 100;
 
-      return matchesSearch && matchesCategory && matchesOrganic && matchesPrice && product.isAvailable;
+      const isAvailable = product.isAvailable !== false; // treat undefined as true
+      return matchesSearch && matchesCategory && matchesOrganic && matchesPrice && isAvailable;
     });
   }, [searchQuery, selectedCategory, organicOnly, priceRange, products]);
 

@@ -1,9 +1,11 @@
 import { motion } from 'framer-motion';
-import { ShoppingCart, MapPin, Leaf } from 'lucide-react';
+import { ShoppingCart, MapPin, Leaf, Handshake } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Product } from '@/types';
 import { cn } from '@/lib/utils';
 import { useCart } from '@/context/CartContext';
+import { useState } from 'react';
+import { NegotiationModal } from '@/components/negotiation/NegotiationModal';
 
 interface ProductCardProps {
   product: Product;
@@ -12,6 +14,9 @@ interface ProductCardProps {
 
 export const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
   const { addToCart } = useCart();
+  const [isNegotiateOpen, setIsNegotiateOpen] = useState(false);
+  const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+  const isConsumer = userInfo?.user?.role === 'consumer' || userInfo?.role === 'consumer';
   const getCategoryEmoji = (category: string) => {
     const emojis: Record<string, string> = {
       vegetables: '🥬',
@@ -48,7 +53,13 @@ export const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
         </div>
 
         {/* Quick Add Button */}
-        <div className="absolute bottom-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="absolute bottom-3 right-3 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          {isConsumer && (
+            <Button size="sm" variant="secondary" className="rounded-full shadow-lg" onClick={() => setIsNegotiateOpen(true)}>
+              <Handshake className="h-4 w-4 mr-1" />
+              Negotiate
+            </Button>
+          )}
           <Button size="sm" className="rounded-full shadow-lg" onClick={() => addToCart(product)}>
             <ShoppingCart className="h-4 w-4 mr-1" />
             Add
@@ -90,6 +101,12 @@ export const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
           </span>
         </div>
       </div>
+
+      <NegotiationModal 
+        product={product} 
+        isOpen={isNegotiateOpen} 
+        onClose={() => setIsNegotiateOpen(false)} 
+      />
     </motion.div>
   );
 };

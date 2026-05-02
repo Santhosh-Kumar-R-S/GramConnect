@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { CartItem, Product } from '@/types';
+import { useToast } from '@/components/ui/use-toast';
 
 interface CartContextType {
     cartItems: CartItem[];
@@ -14,6 +15,7 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export const CartProvider = ({ children }: { children: ReactNode }) => {
     const [cartItems, setCartItems] = useState<CartItem[]>([]);
+    const { toast } = useToast();
 
     // Load from localStorage on mount
     useEffect(() => {
@@ -43,6 +45,10 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
                 );
             }
             return [...prev, { product, quantity: 1 }];
+        });
+        toast({
+            title: "Added to Cart",
+            description: `${product.name} has been added to your cart.`
         });
     };
 

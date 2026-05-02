@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   ShoppingBag, Package, MapPin, Clock,
-  ArrowRight, Star, Heart
+  ArrowRight, Star, Heart, Handshake
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { Product, Order, ProductCategory } from '@/types';
+import { useCart } from '@/context/CartContext';
 
 // Categories Configuration
 const categories: { value: ProductCategory; label: string; icon: string }[] = [
@@ -23,9 +24,11 @@ const categories: { value: ProductCategory; label: string; icon: string }[] = [
 ];
 
 const ConsumerDashboard = () => {
-  const [activeTab, setActiveTab] = useState<'orders' | 'favorites'>('orders');
+  const { addToCart } = useCart();
+  const [activeTab, setActiveTab] = useState<'orders' | 'negotiations'>('orders');
   const [consumerOrders, setConsumerOrders] = useState<Order[]>([]);
   const [recentProducts, setRecentProducts] = useState<Product[]>([]);
+  const [negotiations, setNegotiations] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -54,11 +57,22 @@ const ConsumerDashboard = () => {
               })),
               totalAmount: o.totalAmount,
               status: o.status,
-              deliveryAddress: o.shippingAddress.address,
+              deliveryAddress: o.shippingAddress?.address || 'N/A',
               contactPhone: 'N/A',
               createdAt: new Date(o.createdAt),
               updatedAt: new Date(o.updatedAt)
             })));
+          }
+        }
+
+        // Fetch Negotiations
+        if (userInfo.token) {
+          const negRes = await fetch('/api/negotiations', {
+            headers: { Authorization: `Bearer ${userInfo.token}` }
+          });
+          const negData = await negRes.json();
+          if (negRes.ok) {
+            setNegotiations(negData);
           }
         }
 
@@ -70,13 +84,13 @@ const ConsumerDashboard = () => {
             id: p._id,
             farmerId: p.farmer._id,
             farmerName: p.farmer.name,
-            farmerVillage: `${p.farmer.village}, ${p.farmer.state}`,
+            farmerVillage: p.farmer.village,
             name: p.name,
             category: p.category,
             description: p.description,
-            pricePerUnit: p.pricePerUnit,
+            pricePerUnit: p.price || p.pricePerUnit,
             unit: p.unit,
-            quantityAvailable: p.quantityAvailable,
+            quantityAvailable: p.quantity || p.quantityAvailable,
             harvestDate: new Date(p.harvestDate),
             images: [],
             isOrganic: p.isOrganic,
@@ -169,16 +183,36 @@ const ConsumerDashboard = () => {
             </motion.div>
           </div>
 
+          {/* Tabs */}
+          <div className="flex gap-2 mb-6">
+            <Button
+              variant={activeTab === 'orders' ? 'default' : 'outline'}
+              onClick={() => setActiveTab('orders')}
+            >
+              <Package className="h-4 w-4 mr-2" />
+              Orders
+            </Button>
+            <Button
+              variant={activeTab === 'negotiations' ? 'default' : 'outline'}
+              onClick={() => setActiveTab('negotiations')}
+            >
+              <Handshake className="h-4 w-4 mr-2" />
+              Negotiations
+            </Button>
+          </div>
+
           {/* Main Content */}
           <div className="grid lg:grid-cols-3 gap-8">
-            {/* Left: Orders */}
+            {/* Left: Content Area */}
             <div className="lg:col-span-2">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold">Recent Orders</h2>
-                <Button variant="ghost" size="sm">
-                  View All <ArrowRight className="ml-1 h-4 w-4" />
-                </Button>
-              </div>
+              {activeTab === 'orders' ? (
+                <>
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-xl font-semibold">Recent Orders</h2>
+                    <Button variant="ghost" size="sm">
+                      View All <ArrowRight className="ml-1 h-4 w-4" />
+                    </Button>
+                  </div>
 
               <div className="space-y-4">
                 {consumerOrders.length === 0 ? <p className="text-muted-foreground">No orders found.</p> : consumerOrders.map((order, index) => (
@@ -271,6 +305,59 @@ const ConsumerDashboard = () => {
                   </motion.div>
                 ))}
               </div>
+              </>
+              ) : (
+                <>
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-xl font-semibold">My Negotiations</h2>
+                  </div>
+                  <div className="space-y-4">
+                    {negotiations.length === 0 ? <p className="text-muted-foreground">No active negotiations.</p> : negotiations.map((neg, index) => (
+                      <motion.div
+                        key={neg._id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.1 }}
+                      >
+                        <Card>
+                          <CardContent className="p-4">
+                            <div className="flex items-center justify-between mb-2">
+                              <div>
+                                <h3 className="font-semibold text-lg">{neg.product?.name}</h3>
+                                <p className="text-sm text-muted-foreground">Farmer: {neg.farmer?.name}</p>
+                              </div>
+                              <span className={cn(
+                                "px-3 py-1 rounded-full text-xs font-bold",
+                                neg.status === 'PENDING' && "bg-amber-100 text-amber-700",
+                                neg.status === 'ACCEPTED' && "bg-green-100 text-green-700",
+                                neg.status === 'REJECTED' && "bg-red-100 text-red-700",
+                                neg.status === 'EXPIRED' && "bg-gray-100 text-gray-700"
+                              )}>
+                                {neg.status}
+                              </span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4 mt-4 p-3 bg-muted/50 rounded-lg text-sm">
+                              <div>
+                                <p className="text-muted-foreground">Quantity Requested</p>
+                                <p className="font-medium">{neg.quantity} {neg.product?.unit}</p>
+                              </div>
+                              <div>
+                                <p className="text-muted-foreground">Your Offer</p>
+                                <p className="font-bold text-primary">₹{neg.requestedPrice}/{neg.product?.unit}</p>
+                              </div>
+                            </div>
+                            {neg.status === 'ACCEPTED' && (
+                              <div className="mt-4 pt-4 border-t flex justify-end">
+                                <Button>Proceed to Checkout</Button>
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                      </motion.div>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Right: Quick Shop */}
@@ -292,7 +379,7 @@ const ConsumerDashboard = () => {
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: index * 0.1 }}
                   >
-                    <Card className="hover:shadow-md transition-shadow cursor-pointer">
+                    <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => addToCart(product)}>
                       <CardContent className="p-3">
                         <div className="flex items-center gap-3">
                           <div className="h-12 w-12 rounded-lg bg-gram-green-50 flex items-center justify-center text-2xl shrink-0">
