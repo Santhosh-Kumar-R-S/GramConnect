@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   Package, Plus, ShoppingBag, TrendingUp, Clock,
-  Check, Truck, Edit, Trash2, Eye, Handshake, X
+  Check, Truck, Edit, Trash2, Eye, Handshake, X, ShieldCheck, Upload
 } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
@@ -28,10 +28,12 @@ const categoriesList: { value: ProductCategory; label: string; icon: string }[] 
 ];
 
 const FarmerDashboard = () => {
-  const [activeTab, setActiveTab] = useState<'products' | 'orders' | 'negotiations'>('products');
+  const [activeTab, setActiveTab] = useState<'products' | 'orders' | 'negotiations' | 'verification'>('products');
   const [products, setProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [negotiations, setNegotiations] = useState<any[]>([]);
+  const [certifications, setCertifications] = useState<any[]>([]);
+  const [schedule, setSchedule] = useState<any>(null);
   const [isAddProductOpen, setIsAddProductOpen] = useState(false);
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -119,6 +121,16 @@ const FarmerDashboard = () => {
       if (negRes.ok) {
         setNegotiations(negData);
       }
+
+      // Fetch Certifications
+      const certRes = await fetch('/api/certifications/mine', {
+        headers: { Authorization: `Bearer ${userInfo.token}` }
+      });
+      if (certRes.ok) setCertifications(await certRes.json());
+
+      // Fetch Schedule
+      const schedRes = await fetch(`/api/seasonal/${userInfo.user.id}`);
+      if (schedRes.ok) setSchedule(await schedRes.json());
 
     } catch (error) {
       console.error("Failed to fetch dashboard data", error);
@@ -243,6 +255,66 @@ const FarmerDashboard = () => {
       }
     } catch (err) {
       toast({ title: 'Error', description: 'Failed to update negotiation', variant: 'destructive' });
+    }
+  };
+
+  const handleUploadCert = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    try {
+      const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+      const res = await fetch('/api/certifications', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${userInfo.token}` },
+        body: formData
+      });
+      if (res.ok) {
+        toast({ title: 'Success', description: 'Document uploaded for verification.' });
+        fetchData();
+        (e.target as HTMLFormElement).reset();
+      } else {
+        const error = await res.json();
+        toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      }
+    } catch (err) {
+      toast({ title: 'Error', description: 'Upload failed', variant: 'destructive' });
+    }
+  };
+
+  const handleUpdateSchedule = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const cropName = formData.get('cropName') as string;
+    const months = formData.getAll('months').map(Number);
+    const notes = formData.get('notes') as string;
+    
+    if (months.length === 0) return toast({ title: 'Error', description: 'Select at least one month' });
+
+    let existingCrops = schedule?.crops || [];
+    const index = existingCrops.findIndex((c: any) => c.name === cropName);
+    if (index >= 0) {
+      existingCrops[index] = { name: cropName, months, notes };
+    } else {
+      existingCrops.push({ name: cropName, months, notes });
+    }
+
+    try {
+      const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+      const res = await fetch('/api/seasonal', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${userInfo.token}` 
+        },
+        body: JSON.stringify({ crops: existingCrops })
+      });
+      if (res.ok) {
+        toast({ title: 'Success', description: 'Seasonal calendar updated.' });
+        fetchData();
+        (e.target as HTMLFormElement).reset();
+      }
+    } catch (err) {
+      toast({ title: 'Error', description: 'Failed to update schedule' });
     }
   };
 
@@ -427,6 +499,13 @@ const FarmerDashboard = () => {
                 </span>
               )}
             </Button>
+            <Button
+              variant={activeTab === 'verification' ? 'default' : 'outline'}
+              onClick={() => setActiveTab('verification')}
+            >
+              <ShieldCheck className="h-4 w-4 mr-2" />
+              Trust & Verification
+            </Button>
           </div>
 
           {/* Products Tab */}
@@ -607,6 +686,121 @@ const FarmerDashboard = () => {
                   </CardContent>
                 </Card>
               ))}
+            </motion.div>
+          )}
+
+          {/* Verification Tab */}
+          {activeTab === 'verification' && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+              <div className="grid md:grid-cols-2 gap-6">
+                
+                {/* Organic Certification Upload */}
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center gap-2 mb-4">
+                      <ShieldCheck className="h-5 w-5 text-primary" />
+                      <h3 className="text-lg font-semibold">Organic Certification</h3>
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Upload your organic certification or FSSAI license to get the "Verified Organic" badge on your profile.
+                    </p>
+                    
+                    <form onSubmit={handleUploadCert} className="space-y-4">
+                      <div>
+                        <Label>Document Type</Label>
+                        <select name="type" className="w-full h-10 px-3 mt-1 rounded-lg border border-input bg-background" required>
+                          <option value="Organic">Organic Certificate</option>
+                          <option value="FSSAI">FSSAI License</option>
+                          <option value="GAP">Good Agricultural Practices (GAP)</option>
+                        </select>
+                      </div>
+                      <div>
+                        <Label>Upload File (Image/PDF)</Label>
+                        <Input type="file" name="document" accept=".jpg,.jpeg,.png,.pdf" className="mt-1" required />
+                      </div>
+                      <Button type="submit" className="w-full gap-2">
+                        <Upload className="h-4 w-4" /> Upload Document
+                      </Button>
+                    </form>
+
+                    <div className="mt-6 pt-4 border-t border-border">
+                      <h4 className="text-sm font-semibold mb-2">My Uploads</h4>
+                      {certifications.length === 0 ? (
+                        <p className="text-xs text-muted-foreground">No documents uploaded yet.</p>
+                      ) : (
+                        <div className="space-y-2">
+                          {certifications.map((cert: any) => (
+                            <div key={cert._id} className="flex items-center justify-between p-2 bg-muted rounded-md text-sm">
+                              <span className="font-medium">{cert.type}</span>
+                              <span className={cn(
+                                "px-2 py-0.5 rounded-full text-xs",
+                                cert.status === 'pending' ? 'bg-amber-100 text-amber-700' :
+                                cert.status === 'approved' ? 'bg-green-100 text-green-700' :
+                                'bg-red-100 text-red-700'
+                              )}>
+                                {cert.status}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Seasonal Calendar Manager */}
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Clock className="h-5 w-5 text-primary" />
+                      <h3 className="text-lg font-semibold">Seasonal Calendar</h3>
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Let buyers know when your crops are harvested throughout the year.
+                    </p>
+
+                    <form onSubmit={handleUpdateSchedule} className="space-y-4">
+                      <div>
+                        <Label>Crop Name</Label>
+                        <Input name="cropName" placeholder="e.g., Mangoes" required />
+                      </div>
+                      
+                      <div>
+                        <Label>Available Months</Label>
+                        <div className="grid grid-cols-4 gap-2 mt-2">
+                          {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((month, i) => (
+                            <label key={month} className="flex items-center gap-2 text-sm border rounded p-1 cursor-pointer hover:bg-muted">
+                              <input type="checkbox" name="months" value={i + 1} className="rounded" />
+                              {month}
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div>
+                        <Label>Notes (Optional)</Label>
+                        <Input name="notes" placeholder="e.g., Best yields in late May" />
+                      </div>
+
+                      <Button type="submit" className="w-full">Save Crop Schedule</Button>
+                    </form>
+
+                    {schedule?.crops?.length > 0 && (
+                      <div className="mt-6 pt-4 border-t border-border">
+                        <h4 className="text-sm font-semibold mb-2">Saved Crops</h4>
+                        <div className="flex flex-wrap gap-2">
+                          {schedule.crops.map((c: any) => (
+                            <span key={c.name} className="px-2 py-1 bg-green-50 text-green-700 rounded-md text-xs border border-green-200">
+                              {c.name}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+              </div>
             </motion.div>
           )}
         </div>

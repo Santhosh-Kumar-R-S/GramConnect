@@ -15,6 +15,8 @@ import OrderHistory from "./pages/consumer/OrderHistory";
 import AdminDashboard from "./pages/admin/Dashboard";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
+import FarmMap from "./pages/FarmMap";
+import FarmerProfile from "./pages/FarmerProfile";
 
 import { CartProvider } from "./context/CartContext";
 
@@ -33,6 +35,8 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/cart" element={<Cart />} />
+            <Route path="/farms" element={<FarmMap />} />
+            <Route path="/farmer/:farmerId" element={<FarmerProfile />} />
             {/* Protected Routes - Role-based */}
             <Route element={<ProtectedRoute allowedRoles={['farmer']} />}>
               <Route path="/farmer/dashboard" element={<FarmerDashboard />} />

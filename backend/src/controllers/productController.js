@@ -1,5 +1,6 @@
 import asyncHandler from "express-async-handler";
 import Product from "../models/Product.js";
+import { getFreshnessScore } from "../utils/freshnessScore.js";
 
 const createProduct = asyncHandler(async (req, res) => {
   if (req.user.role === "farmer" && req.user.status !== "approved") {
@@ -100,10 +101,16 @@ const listProducts = asyncHandler(async (req, res) => {
   }
 
   const products = await Product.find(filters)
-    .populate("farmer", "name village location crops rating")
-    .sort(lat && lng ? undefined : "-createdAt"); // $near automatically sorts by distance
+    .populate("farmer", "name village location crops rating geoCoordinates")
+    .sort(lat && lng ? undefined : "-createdAt");
 
-  res.json(products);
+  const withFreshness = products.map(p => {
+    const obj = p.toObject();
+    obj.freshness = getFreshnessScore(obj.harvestDate, obj.category);
+    return obj;
+  });
+
+  res.json(withFreshness);
 });
 
 const getProductById = asyncHandler(async (req, res) => {
@@ -114,7 +121,9 @@ const getProductById = asyncHandler(async (req, res) => {
     throw new Error("Product not found");
   }
 
-  res.json(product);
+  const obj = product.toObject();
+  obj.freshness = getFreshnessScore(obj.harvestDate, obj.category);
+  res.json(obj);
 });
 
 const deleteProduct = asyncHandler(async (req, res) => {

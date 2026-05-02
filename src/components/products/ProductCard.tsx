@@ -6,6 +6,8 @@ import { cn } from '@/lib/utils';
 import { useCart } from '@/context/CartContext';
 import { useState } from 'react';
 import { NegotiationModal } from '@/components/negotiation/NegotiationModal';
+import { OrganicBadge } from '@/components/trust/OrganicBadge';
+import { FreshnessBadge } from '@/components/trust/FreshnessBadge';
 
 interface ProductCardProps {
   product: Product;
@@ -43,13 +45,9 @@ export const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
         <span className="text-6xl">{getCategoryEmoji(product.category)}</span>
 
         {/* Badges */}
-        <div className="absolute top-3 left-3 flex gap-2">
-          {product.isOrganic && (
-            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-primary text-primary-foreground text-xs font-medium">
-              <Leaf className="h-3 w-3" />
-              Organic
-            </span>
-          )}
+        <div className="absolute top-3 left-3 flex flex-col items-start gap-1">
+          {product.isOrganic && <OrganicBadge size="sm" />}
+          {product.harvestDate && <FreshnessBadge harvestDate={product.harvestDate} category={product.category} />}
         </div>
 
         {/* Quick Add Button */}

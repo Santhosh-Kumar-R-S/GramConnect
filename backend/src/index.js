@@ -13,12 +13,16 @@ import negotiationRoutes from "./routes/negotiationRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
 import orderRoutes from "./routes/orderRoutes.js";
 import slotRoutes from "./routes/slotRoutes.js";
+import farmMapRoutes from "./routes/farmMapRoutes.js";
+import seasonalRoutes from "./routes/seasonalRoutes.js";
+import certificationRoutes from "./routes/certificationRoutes.js";
 import { notFound, errorHandler } from "./middleware/errorMiddleware.js";
 
 dotenv.config();
 
 const app = express();
 app.use(express.json());
+app.use('/uploads', express.static('uploads'));
 app.use(
   cors({
     origin: process.env.FRONTEND_URL || "*"
@@ -40,6 +44,9 @@ app.use("/api/negotiations", negotiationRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/slots", slotRoutes);
+app.use("/api/farms", farmMapRoutes);
+app.use("/api/seasonal", seasonalRoutes);
+app.use("/api/certifications", certificationRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

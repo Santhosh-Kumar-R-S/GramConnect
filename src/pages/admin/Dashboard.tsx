@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   Users, ShoppingBag, Package, TrendingUp,
-  CheckCircle, XCircle, Clock, Eye, UserCheck, UserX
+  CheckCircle, XCircle, Clock, Eye, UserCheck, UserX, ShieldCheck
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
@@ -37,7 +37,7 @@ const stats = [
 ];
 
 const AdminDashboard = () => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'approvals' | 'orders' | 'users'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'approvals' | 'orders' | 'users' | 'certifications'>('overview');
   const [orders, setOrders] = useState<any[]>([]);
   const [farmers, setFarmers] = useState<any[]>([]);
   const [consumers, setConsumers] = useState<any[]>([]);
@@ -49,6 +49,7 @@ const AdminDashboard = () => {
     totalRevenue: 0
   });
   const [pendingApprovals, setPendingApprovals] = useState<any[]>([]);
+  const [certifications, setCertifications] = useState<any[]>([]);
   const [selectedFarmer, setSelectedFarmer] = useState<any>(null);
   const [viewingActivity, setViewingActivity] = useState(false);
 
@@ -62,6 +63,19 @@ const AdminDashboard = () => {
       if (res.ok) setPendingApprovals(await res.json());
     } catch (err) {
       console.error("Failed to fetch pending approvals", err);
+    }
+  };
+
+  const fetchCertifications = async () => {
+    try {
+      const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+      if (!userInfo.token) return;
+      const res = await fetch('/api/certifications/pending', {
+        headers: { Authorization: `Bearer ${userInfo.token}` }
+      });
+      if (res.ok) setCertifications(await res.json());
+    } catch (err) {
+      console.error("Failed to fetch certifications", err);
     }
   };
 
@@ -86,6 +100,26 @@ const AdminDashboard = () => {
     }
   };
 
+  const handleVerifyCert = async (id: string, status: string) => {
+    const reason = status === 'rejected' ? prompt("Enter rejection reason:") : "";
+    if (status === 'rejected' && !reason) return;
+
+    try {
+      const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+      const res = await fetch(`/api/certifications/${id}/verify`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${userInfo.token}`,
+        },
+        body: JSON.stringify({ status, rejectionReason: reason }),
+      });
+      if (res.ok) fetchCertifications();
+    } catch (error) {
+      console.error('Error verifying cert:', error);
+    }
+  };
+
   const fetchData = async () => {
     try {
       const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
@@ -94,6 +128,7 @@ const AdminDashboard = () => {
 
       // Pending Approvals (Keep existing)
       fetchPendingApprovals();
+      fetchCertifications();
 
       // Fetch All Orders
       const orderRes = await fetch('/api/orders', {
@@ -211,6 +246,7 @@ const AdminDashboard = () => {
             {[
               { id: 'overview', label: 'Overview', icon: TrendingUp },
               { id: 'approvals', label: 'Approvals', icon: UserCheck },
+              { id: 'certifications', label: 'Certifications', icon: ShieldCheck },
               { id: 'orders', label: 'Orders', icon: ShoppingBag },
               { id: 'users', label: 'Users', icon: Users },
             ].map((tab) => (
@@ -515,6 +551,63 @@ const AdminDashboard = () => {
               </Card>
             </motion.div>
           )}
+
+          {/* Certifications Tab */}
+          {activeTab === 'certifications' && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-xl font-bold">Pending Certifications</h2>
+                  <p className="text-muted-foreground">Verify farmer organic and safety certificates</p>
+                </div>
+              </div>
+
+              {certifications.length === 0 ? (
+                <Card>
+                  <CardContent className="p-12 text-center text-muted-foreground">
+                    <ShieldCheck className="h-12 w-12 mx-auto mb-4 opacity-20" />
+                    <p>No pending certifications to review.</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="grid gap-4">
+                  {certifications.map((cert) => (
+                    <Card key={cert._id}>
+                      <CardContent className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div className="flex items-start gap-4">
+                          <div className="p-3 bg-primary/10 text-primary rounded-lg">
+                            <ShieldCheck className="h-6 w-6" />
+                          </div>
+                          <div>
+                            <h3 className="font-semibold text-lg">{cert.type} Certificate</h3>
+                            <p className="text-sm text-muted-foreground">Farmer: {cert.farmer?.name} ({cert.farmer?.village})</p>
+                            <p className="text-xs text-muted-foreground mt-1">Submitted: {new Date(cert.createdAt).toLocaleDateString()}</p>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col sm:flex-row items-center gap-3">
+                          <a href={cert.documentUrl} target="_blank" rel="noopener noreferrer">
+                            <Button variant="outline" size="sm">
+                              <Eye className="h-4 w-4 mr-2" /> View Document
+                            </Button>
+                          </a>
+                          <div className="flex gap-2">
+                            <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => handleVerifyCert(cert._id, 'approved')}>
+                              <CheckCircle className="h-4 w-4 mr-1" /> Approve
+                            </Button>
+                            <Button size="sm" variant="destructive" onClick={() => handleVerifyCert(cert._id, 'rejected')}>
+                              <XCircle className="h-4 w-4 mr-1" /> Reject
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </motion.div>
+          )}
+
         </div>
       </div>
 

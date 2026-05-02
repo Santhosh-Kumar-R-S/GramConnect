@@ -33,6 +33,13 @@ const farmerSchema = new mongoose.Schema(
     numReviews: {
       type: Number,
       default: 0
+    },
+    isOrganicVerified: {
+      type: Boolean,
+      default: false
+    },
+    organicVerifiedAt: {
+      type: Date
     }
   },
   {
