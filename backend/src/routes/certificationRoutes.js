@@ -1,6 +1,6 @@
 import express from "express";
 import { uploadCertification, getMyCertifications, getPendingCertifications, verifyCertification, uploadMiddleware } from "../controllers/certificationController.js";
-import { protect, admin } from "../middleware/authMiddleware.js";
+import { protect, authorizeRoles } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
@@ -9,7 +9,7 @@ router.route("/")
 
 router.get("/mine", protect, getMyCertifications);
 
-router.get("/pending", protect, admin, getPendingCertifications);
-router.put("/:id/verify", protect, admin, verifyCertification);
+router.get("/pending", protect, authorizeRoles("admin"), getPendingCertifications);
+router.put("/:id/verify", protect, authorizeRoles("admin"), verifyCertification);
 
 export default router;

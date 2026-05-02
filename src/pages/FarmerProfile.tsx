@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { MapPin, Star, Leaf, Calendar, Package, ArrowLeft, ShieldCheck } from 'lucide-react';
+import { MapPin, Star, Leaf, Calendar as CalendarIcon, Package, ArrowLeft, ShieldCheck, Camera, Heart } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
@@ -21,20 +21,23 @@ const FarmerProfile = () => {
   const { farmerId } = useParams<{ farmerId: string }>();
   const [profile, setProfile] = useState<any>(null);
   const [schedule, setSchedule] = useState<any>(null);
+  const [updates, setUpdates] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'products' | 'about'>('products');
+  const [activeTab, setActiveTab] = useState<'products' | 'about' | 'updates'>('products');
   const { addToCart } = useCart();
   const { toast } = useToast();
 
   useEffect(() => {
     const fetch_ = async () => {
       try {
-        const [profRes, schedRes] = await Promise.all([
+        const [profRes, schedRes, updatesRes] = await Promise.all([
           fetch(`/api/farms/${farmerId}/profile`),
-          fetch(`/api/seasonal/${farmerId}`)
+          fetch(`/api/seasonal/${farmerId}`),
+          fetch(`/api/farm-updates/farmer/${farmerId}`)
         ]);
         if (profRes.ok) setProfile(await profRes.json());
         if (schedRes.ok) setSchedule(await schedRes.json());
+        if (updatesRes.ok) setUpdates(await updatesRes.json());
       } catch (e) { console.error(e); }
       finally { setLoading(false); }
     };
@@ -101,7 +104,7 @@ const FarmerProfile = () => {
                       </span>
                     )}
                     <span className="flex items-center gap-1">
-                      <Calendar className="h-4 w-4" />
+                      <CalendarIcon className="h-4 w-4" />
                       Member since {memberYears > 0 ? `${memberYears}yr ago` : 'this year'}
                     </span>
                   </div>
@@ -133,6 +136,9 @@ const FarmerProfile = () => {
           </Button>
           <Button variant={activeTab === 'about' ? 'default' : 'outline'} onClick={() => setActiveTab('about')}>
             <Leaf className="h-4 w-4 mr-2" /> About Farm
+          </Button>
+          <Button variant={activeTab === 'updates' ? 'default' : 'outline'} onClick={() => setActiveTab('updates')}>
+            <Camera className="h-4 w-4 mr-2" /> Updates ({updates.length})
           </Button>
         </div>
 
@@ -238,6 +244,35 @@ const FarmerProfile = () => {
                 </div>
               </CardContent>
             </Card>
+          </motion.div>
+        )}
+
+        {/* Updates Tab */}
+        {activeTab === 'updates' && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+            {updates.length === 0 ? (
+              <Card>
+                <CardContent className="p-12 text-center text-muted-foreground">
+                  <Camera className="h-12 w-12 mx-auto mb-4 opacity-20" />
+                  <p>This farmer hasn't posted any updates yet.</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {updates.map((update: any) => (
+                  <Card key={update._id} className="overflow-hidden">
+                    <img src={update.imageUrl} alt="Farm Update" className="w-full aspect-square object-cover" />
+                    <CardContent className="p-4">
+                      <p className="text-sm">{update.caption}</p>
+                      <div className="flex items-center justify-between mt-4 text-xs text-muted-foreground">
+                        <span>{new Date(update.createdAt).toLocaleDateString()}</span>
+                        <span className="flex items-center gap-1">❤️ {update.likes}</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
           </motion.div>
         )}
       </div>

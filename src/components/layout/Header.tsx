@@ -11,6 +11,7 @@ const navLinks = [
   { href: '/', label: 'Home' },
   { href: '/products', label: 'Browse Products' },
   { href: '/farms', label: 'Know Your Farm' },
+  { href: '/feed', label: 'Farm Feed' },
   { href: '/about', label: 'About' },
 ];
 

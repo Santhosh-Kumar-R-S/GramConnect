@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   Package, Plus, ShoppingBag, TrendingUp, Clock,
-  Check, Truck, Edit, Trash2, Eye, Handshake, X, ShieldCheck, Upload
+  Check, Truck, Edit, Trash2, Eye, Handshake, X, ShieldCheck, Upload, Camera
 } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
@@ -28,15 +28,18 @@ const categoriesList: { value: ProductCategory; label: string; icon: string }[] 
 ];
 
 const FarmerDashboard = () => {
-  const [activeTab, setActiveTab] = useState<'products' | 'orders' | 'negotiations' | 'verification'>('products');
+  const [activeTab, setActiveTab] = useState<'products' | 'orders' | 'negotiations' | 'verification' | 'updates'>('products');
   const [products, setProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [negotiations, setNegotiations] = useState<any[]>([]);
   const [certifications, setCertifications] = useState<any[]>([]);
   const [schedule, setSchedule] = useState<any>(null);
+  const [updates, setUpdates] = useState<any[]>([]);
   const [isAddProductOpen, setIsAddProductOpen] = useState(false);
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [editingUpdateId, setEditingUpdateId] = useState<string | null>(null);
+  const [editCaption, setEditCaption] = useState('');
   const { toast } = useToast();
 
   // Form State
@@ -131,6 +134,10 @@ const FarmerDashboard = () => {
       // Fetch Schedule
       const schedRes = await fetch(`/api/seasonal/${userInfo.user.id}`);
       if (schedRes.ok) setSchedule(await schedRes.json());
+
+      // Fetch Updates
+      const updatesRes = await fetch(`/api/farm-updates/farmer/${userInfo.user.id}`);
+      if (updatesRes.ok) setUpdates(await updatesRes.json());
 
     } catch (error) {
       console.error("Failed to fetch dashboard data", error);
@@ -315,6 +322,76 @@ const FarmerDashboard = () => {
       }
     } catch (err) {
       toast({ title: 'Error', description: 'Failed to update schedule' });
+    }
+  };
+
+  const handlePostUpdate = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    try {
+      const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+      const res = await fetch('/api/farm-updates', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${userInfo.token}` },
+        body: formData
+      });
+      if (res.ok) {
+        toast({ title: 'Success', description: 'Farm update posted!' });
+        fetchData();
+        (e.target as HTMLFormElement).reset();
+      } else {
+        const error = await res.json();
+        toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      }
+    } catch (err) {
+      toast({ title: 'Error', description: 'Failed to post update', variant: 'destructive' });
+    }
+  };
+
+  const handleEditUpdate = async (id: string) => {
+    try {
+      const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+      const res = await fetch(`/api/farm-updates/${id}`, {
+        method: 'PUT',
+        headers: { 
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${userInfo.token}` 
+        },
+        body: JSON.stringify({ caption: editCaption })
+      });
+      
+      if (res.ok) {
+        toast({ title: 'Success', description: 'Update edited successfully' });
+        setEditingUpdateId(null);
+        fetchData();
+      } else {
+        const error = await res.json();
+        toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      }
+    } catch (err) {
+      toast({ title: 'Error', description: 'Failed to edit update', variant: 'destructive' });
+    }
+  };
+
+  const handleDeleteUpdate = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this update?')) return;
+    
+    try {
+      const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+      const res = await fetch(`/api/farm-updates/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${userInfo.token}` }
+      });
+      
+      if (res.ok) {
+        toast({ title: 'Success', description: 'Update deleted' });
+        fetchData();
+      } else {
+        const error = await res.json();
+        toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      }
+    } catch (err) {
+      toast({ title: 'Error', description: 'Failed to delete update', variant: 'destructive' });
     }
   };
 
@@ -505,6 +582,13 @@ const FarmerDashboard = () => {
             >
               <ShieldCheck className="h-4 w-4 mr-2" />
               Trust & Verification
+            </Button>
+            <Button
+              variant={activeTab === 'updates' ? 'default' : 'outline'}
+              onClick={() => setActiveTab('updates')}
+            >
+              <Camera className="h-4 w-4 mr-2" />
+              Live Updates
             </Button>
           </div>
 
@@ -799,6 +883,109 @@ const FarmerDashboard = () => {
                     )}
                   </CardContent>
                 </Card>
+
+              </div>
+            </motion.div>
+          )}
+
+          {/* Live Updates Tab */}
+          {activeTab === 'updates' && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+              <div className="grid md:grid-cols-3 gap-6">
+                
+                {/* Post Update Form */}
+                <Card className="md:col-span-1 h-fit">
+                  <CardContent className="p-6">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Camera className="h-5 w-5 text-primary" />
+                      <h3 className="text-lg font-semibold">New Update</h3>
+                    </div>
+                    <form onSubmit={handlePostUpdate} className="space-y-4">
+                      <div>
+                        <Label>Photo / Video</Label>
+                        <Input type="file" name="image" accept="image/*" required className="mt-1" />
+                      </div>
+                      <div>
+                        <Label>Caption</Label>
+                        <textarea 
+                          name="caption" 
+                          rows={4} 
+                          className="w-full mt-1 rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                          placeholder="What's happening on the farm today?"
+                          required
+                        />
+                      </div>
+                      <Button type="submit" className="w-full">Post Update</Button>
+                    </form>
+                  </CardContent>
+                </Card>
+
+                {/* Updates Feed */}
+                <div className="md:col-span-2 space-y-4">
+                  <h3 className="text-lg font-semibold">My Past Updates</h3>
+                  {updates.length === 0 ? (
+                    <Card>
+                      <CardContent className="p-8 text-center text-muted-foreground">
+                        <Camera className="h-10 w-10 mx-auto mb-4 opacity-20" />
+                        <p>You haven't posted any updates yet.</p>
+                        <p className="text-sm mt-1">Share your farming journey with customers to build trust!</p>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      {updates.map((update: any) => (
+                        <Card key={update._id} className="overflow-hidden">
+                          <img src={update.imageUrl} alt="Farm Update" className="w-full h-48 object-cover" />
+                          <CardContent className="p-4">
+                            {editingUpdateId === update._id ? (
+                              <div className="space-y-2">
+                                <textarea
+                                  className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm"
+                                  value={editCaption}
+                                  onChange={(e) => setEditCaption(e.target.value)}
+                                  rows={3}
+                                />
+                                <div className="flex gap-2">
+                                  <Button size="sm" onClick={() => handleEditUpdate(update._id)}>Save</Button>
+                                  <Button size="sm" variant="outline" onClick={() => setEditingUpdateId(null)}>Cancel</Button>
+                                </div>
+                              </div>
+                            ) : (
+                              <>
+                                <p className="text-sm">{update.caption}</p>
+                                <div className="flex items-center justify-between mt-4 text-xs text-muted-foreground">
+                                  <span>{new Date(update.createdAt).toLocaleDateString()}</span>
+                                  <span className="flex items-center gap-1">❤️ {update.likes} likes</span>
+                                </div>
+                                <div className="flex gap-2 mt-4 pt-4 border-t border-border">
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline" 
+                                    className="flex-1"
+                                    onClick={() => {
+                                      setEditingUpdateId(update._id);
+                                      setEditCaption(update.caption);
+                                    }}
+                                  >
+                                    <Edit className="h-4 w-4 mr-1" /> Edit
+                                  </Button>
+                                  <Button 
+                                    size="sm" 
+                                    variant="destructive" 
+                                    className="flex-1"
+                                    onClick={() => handleDeleteUpdate(update._id)}
+                                  >
+                                    <Trash2 className="h-4 w-4 mr-1" /> Delete
+                                  </Button>
+                                </div>
+                              </>
+                            )}
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </div>
 
               </div>
             </motion.div>

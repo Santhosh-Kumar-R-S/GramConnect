@@ -17,6 +17,8 @@ import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
 import FarmMap from "./pages/FarmMap";
 import FarmerProfile from "./pages/FarmerProfile";
+import Feed from "./pages/Feed";
+import About from "./pages/About";
 
 import { CartProvider } from "./context/CartContext";
 
@@ -37,6 +39,8 @@ const App = () => (
             <Route path="/cart" element={<Cart />} />
             <Route path="/farms" element={<FarmMap />} />
             <Route path="/farmer/:farmerId" element={<FarmerProfile />} />
+            <Route path="/feed" element={<Feed />} />
+            <Route path="/about" element={<About />} />
             {/* Protected Routes - Role-based */}
             <Route element={<ProtectedRoute allowedRoles={['farmer']} />}>
               <Route path="/farmer/dashboard" element={<FarmerDashboard />} />
