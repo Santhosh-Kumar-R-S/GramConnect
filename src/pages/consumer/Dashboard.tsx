@@ -162,7 +162,7 @@ const ConsumerDashboard = () => {
               <Card>
                 <CardContent className="p-4 text-center">
                   <Clock className="h-8 w-8 text-amber-500 mx-auto mb-2" />
-                  <p className="text-2xl font-bold">{consumerOrders.filter(o => o.status === 'Pending').length}</p>
+                  <p className="text-2xl font-bold">{consumerOrders.filter(o => o.status === 'pending').length}</p>
                   <p className="text-sm text-muted-foreground">In Progress</p>
                 </CardContent>
               </Card>
@@ -244,12 +244,12 @@ const ConsumerDashboard = () => {
                               <span className="text-sm font-medium">Order #{order.id}</span>
                               <span className={cn(
                                 "px-2 py-0.5 rounded-full text-xs font-medium",
-                                order.status === 'Pending'   && "bg-amber-100 text-amber-700",
-                                order.status === 'Accepted'  && "bg-blue-100 text-blue-700",
-                                order.status === 'Packed'    && "bg-purple-100 text-purple-700",
-                                order.status === 'Shipped'   && "bg-cyan-100 text-cyan-700",
-                                order.status === 'Delivered' && "bg-green-100 text-green-700",
-                                order.status === 'Rejected'  && "bg-red-100 text-red-700",
+                                order.status === 'pending'   && "bg-amber-100 text-amber-700",
+                                order.status === 'accepted'  && "bg-blue-100 text-blue-700",
+                                order.status === 'processing'    && "bg-purple-100 text-purple-700",
+                                order.status === 'shipped'   && "bg-cyan-100 text-cyan-700",
+                                order.status === 'delivered' && "bg-green-100 text-green-700",
+                                order.status === 'cancelled'  && "bg-red-100 text-red-700",
                               )}>
                                 {order.status}
                               </span>
@@ -295,12 +295,12 @@ const ConsumerDashboard = () => {
                             <span className="flex items-center gap-2 font-medium">
                               <span className={cn(
                                 "h-2.5 w-2.5 rounded-full",
-                                order.status === 'Pending'   && "bg-amber-400",
-                                order.status === 'Accepted'  && "bg-blue-400",
-                                order.status === 'Packed'    && "bg-purple-400",
-                                order.status === 'Shipped'   && "bg-cyan-400",
-                                order.status === 'Delivered' && "bg-green-500",
-                                order.status === 'Rejected'  && "bg-red-400",
+                                order.status === 'pending'   && "bg-amber-400",
+                                order.status === 'accepted'  && "bg-blue-400",
+                                order.status === 'processing'    && "bg-purple-400",
+                                order.status === 'shipped'   && "bg-cyan-400",
+                                order.status === 'delivered' && "bg-green-500",
+                                order.status === 'cancelled'  && "bg-red-400",
                               )} />
                               {order.status}
                             </span>
