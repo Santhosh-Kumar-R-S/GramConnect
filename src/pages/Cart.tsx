@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ShoppingCart, Plus, Minus, Trash2, ArrowRight, MapPin, Leaf } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -39,6 +39,7 @@ const Cart = () => {
   const [contactPhone, setContactPhone] = useState('');
   const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
   const { toast } = useToast();
+  const navigate = useNavigate();
   const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
 
   const subtotal = cartItems.reduce((sum, item) => sum + (item.product.pricePerUnit * item.quantity), 0);
@@ -126,7 +127,7 @@ const Cart = () => {
 
       // 4b. Production — open real Razorpay modal
       const options = {
-        key: "rzp_test_SkboVnjJ83LdEp",
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID,
         amount: rzpOrder.amount,
         currency: rzpOrder.currency,
         name: "GramConnect",
@@ -173,6 +174,80 @@ const Cart = () => {
 
       const paymentObject = new (window as any).Razorpay(options);
       paymentObject.open();
+
+    } catch (error: any) {
+      console.error(error);
+      toast({ title: 'Error', description: error.message || 'Something went wrong', variant: 'destructive' });
+    }
+  };
+
+  const handleSplitPayment = async () => {
+    if (!deliveryAddress || !contactPhone) {
+      toast({ title: 'Error', description: 'Please fill in delivery details', variant: 'destructive' });
+      return;
+    }
+
+    try {
+      const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+      if (!userInfo.token) {
+        toast({ title: 'Error', description: 'Please login to place an order', variant: 'destructive' });
+        return;
+      }
+
+      // 1. Create Order in Backend (Payment Status: Pending)
+      const orderItems = cartItems.map(item => ({
+        product: item.product.id,
+        name: item.product.name,
+        quantity: item.quantity,
+        price: item.product.pricePerUnit,
+        farmer: item.product.farmerId
+      }));
+
+      const orderRes = await fetch('/api/orders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${userInfo.token}`,
+        },
+        body: JSON.stringify({
+          items: orderItems,
+          totalAmount: total,
+          deliverySlotId: selectedSlotId || undefined,
+          shippingAddress: {
+            address: deliveryAddress,
+            city: 'Unknown',
+            postalCode: '000000',
+            country: 'India',
+          },
+        }),
+      });
+
+      if (!orderRes.ok) throw new Error('Failed to create order');
+      const order = await orderRes.json();
+
+      // 2. Initiate Split Payment (Demo: 50/50 split with a friend)
+      const halfAmount = total / 2;
+      const splitRes = await fetch('/api/split-payments/initiate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${userInfo.token}`,
+        },
+        body: JSON.stringify({
+          orderId: order._id,
+          contributors: [
+            { userId: userInfo._id, name: userInfo.name || 'You', amountAllocated: halfAmount },
+            { userId: null, name: 'Your Friend', amountAllocated: halfAmount },
+          ]
+        }),
+      });
+
+      if (!splitRes.ok) throw new Error('Failed to initiate split payment');
+      const splitData = await splitRes.json();
+
+      clearCart();
+      toast({ title: 'Group Payment Created', description: 'Redirecting to split payment page...' });
+      navigate(`/consumer/split-payment/${splitData.groupId}`);
 
     } catch (error: any) {
       console.error(error);
@@ -354,10 +429,16 @@ const Cart = () => {
                     </div>
                   </div>
 
-                  <Button className="w-full" size="lg" onClick={handlePlaceOrder}>
-                    Place Order
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
+                  <div className="space-y-3">
+                    <Button className="w-full" size="lg" onClick={handlePlaceOrder}>
+                      Place Order (Full Payment)
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+
+                    <Button className="w-full" variant="outline" size="lg" onClick={handleSplitPayment}>
+                      Split Payment with Friends
+                    </Button>
+                  </div>
 
                   <p className="text-xs text-muted-foreground text-center mt-4">
                     Payment: Securely via Razorpay

@@ -17,6 +17,8 @@ import farmMapRoutes from "./routes/farmMapRoutes.js";
 import seasonalRoutes from "./routes/seasonalRoutes.js";
 import certificationRoutes from "./routes/certificationRoutes.js";
 import updateRoutes from "./routes/updateRoutes.js";
+import walletRoutes from "./routes/walletRoutes.js";
+import splitPaymentRoutes from "./routes/splitPaymentRoutes.js";
 import { notFound, errorHandler } from "./middleware/errorMiddleware.js";
 
 dotenv.config();
@@ -49,6 +51,9 @@ app.use("/api/farms", farmMapRoutes);
 app.use("/api/seasonal", seasonalRoutes);
 app.use("/api/certifications", certificationRoutes);
 app.use("/api/farm-updates", updateRoutes);
+app.use("/api/payments", paymentRoutes);
+app.use("/api/wallet", walletRoutes);
+app.use("/api/split-payments", splitPaymentRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

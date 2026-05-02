@@ -1,6 +1,9 @@
 import asyncHandler from "express-async-handler";
 import crypto from "crypto";
 import Order from "../models/Order.js";
+import Payment from "../models/Payment.js";
+import WalletTransaction from "../models/WalletTransaction.js";
+import { getOrCreateWallet } from "./walletController.js";
 
 // @desc    Create Razorpay Order
 // @route   POST /api/payments/create-order
@@ -60,6 +63,15 @@ const createRazorpayOrder = asyncHandler(async (req, res) => {
   order.razorpayOrderId = razorpayOrder.id;
   await order.save();
 
+  // Create Payment record
+  await Payment.create({
+    orderId: order._id,
+    userId: req.user._id,
+    razorpayOrderId: razorpayOrder.id,
+    amount: razorpayOrder.amount,
+    status: "created",
+  });
+
   res.json({
     id: razorpayOrder.id,
     amount: razorpayOrder.amount,
@@ -100,6 +112,34 @@ const verifyPayment = asyncHandler(async (req, res) => {
     order.razorpaySignature = razorpay_signature;
 
     await order.save();
+
+    // Update payment record
+    const payment = await Payment.findOne({ razorpayOrderId: razorpay_order_id });
+    if (payment) {
+      payment.status = "captured";
+      payment.razorpayPaymentId = razorpay_payment_id;
+      payment.razorpaySignature = razorpay_signature;
+      await payment.save();
+    }
+
+    // Cashback Logic
+    const totalQuantity = order.items.reduce((sum, item) => sum + item.quantity, 0);
+    if (totalQuantity >= 50) {
+      const cashbackAmount = Math.round(order.totalAmount * 0.03); // 3% cashback
+      const wallet = await getOrCreateWallet(order.consumer);
+      wallet.balance += cashbackAmount;
+      await wallet.save();
+
+      await WalletTransaction.create({
+        walletId: wallet._id,
+        type: "credit",
+        amount: cashbackAmount,
+        description: "Cashback for bulk order (>=50 kg)",
+        referenceId: order._id,
+        referenceModel: "Order",
+      });
+    }
+
     res.json({ message: "Payment verified successfully", order });
   } else {
     res.status(400);

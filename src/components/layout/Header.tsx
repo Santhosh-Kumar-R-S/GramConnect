@@ -93,9 +93,16 @@ export const Header = () => {
                 Hi, {(user?.user?.name || user?.name || 'User').split(' ')[0]}
               </span>
               {user?.user?.role && (
-                <Button variant="ghost" asChild>
-                  <Link to={`/${user.user.role}/dashboard`}>Dashboard</Link>
-                </Button>
+                <>
+                  <Button variant="ghost" asChild>
+                    <Link to={`/${user.user.role}/dashboard`}>Dashboard</Link>
+                  </Button>
+                  {user.user.role === 'consumer' && (
+                    <Button variant="ghost" asChild>
+                      <Link to="/consumer/wallet">Wallet</Link>
+                    </Button>
+                  )}
+                </>
               )}
               <Button variant="outline" onClick={handleLogout}>
                 Logout

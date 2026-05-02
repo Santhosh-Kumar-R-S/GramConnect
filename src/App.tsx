@@ -11,6 +11,8 @@ import Cart from "./pages/Cart";
 import FarmerDashboard from "./pages/farmer/Dashboard";
 import FarmerPending from "./pages/farmer/Pending";
 import ConsumerDashboard from "./pages/consumer/Dashboard";
+import Wallet from "./pages/consumer/Wallet";
+import SplitPayment from "./pages/consumer/SplitPayment";
 import OrderHistory from "./pages/consumer/OrderHistory";
 import AdminDashboard from "./pages/admin/Dashboard";
 import NotFound from "./pages/NotFound";
@@ -48,6 +50,8 @@ const App = () => (
             </Route>
             <Route element={<ProtectedRoute allowedRoles={['consumer']} />}>
               <Route path="/consumer/dashboard" element={<ConsumerDashboard />} />
+              <Route path="/consumer/wallet" element={<Wallet />} />
+              <Route path="/consumer/split-payment/:groupId" element={<SplitPayment />} />
               <Route path="/consumer/orders" element={<OrderHistory />} />
             </Route>
             <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
