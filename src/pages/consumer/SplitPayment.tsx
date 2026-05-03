@@ -14,6 +14,17 @@ export default function SplitPayment() {
   const { toast } = useToast();
   const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
 
+  // Razorpay Script Loader
+  const loadScript = (src: string) => {
+    return new Promise((resolve) => {
+      const script = document.createElement('script');
+      script.src = src;
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
+
   useEffect(() => {
     const fetchPayment = async () => {
       try {
@@ -39,20 +50,62 @@ export default function SplitPayment() {
     }
 
     try {
-      // 1. Initialize Razorpay (Demo Mode bypasses modal)
-      const isTestMode = import.meta.env.VITE_RAZORPAY_KEY_ID === "rzp_test_dummykey123" || !import.meta.env.VITE_RAZORPAY_KEY_ID;
-      
-      let mockPaymentId = `pay_${Date.now()}`;
-      let mockOrderId = `order_${Date.now()}`;
-      let mockSignature = `sig_${Date.now()}`;
+      // 1. Create Order
+      const orderRes = await fetch(`/api/split-payments/${groupId}/create-order`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${userInfo.token}`
+        },
+        body: JSON.stringify({ contributorId })
+      });
 
-      if (!isTestMode) {
-        // Here we'd call the real Razorpay SDK checkout
-        // For simplicity in this demo, we'll simulate a successful payment if key isn't provided
-        toast({ title: 'Notice', description: 'Razorpay integration requires real keys. Simulating payment success for demo.' });
+      if (!orderRes.ok) throw new Error('Failed to initialize payment');
+      const rzpOrder = await orderRes.json();
+
+      if (rzpOrder._testMode) {
+        toast({ title: 'Notice', description: 'Simulating payment success for demo.' });
+        await completePayment(contributorId, `pay_${Date.now()}`, rzpOrder.id, `sig_${Date.now()}`);
+        return;
       }
 
-      // 2. Submit Contribution to Backend
+      // 2. Load SDK
+      const res = await loadScript('https://checkout.razorpay.com/v1/checkout.js');
+      if (!res) {
+        toast({ title: 'Error', description: 'Razorpay SDK failed to load', variant: 'destructive' });
+        return;
+      }
+
+      // 3. Open Modal
+      const options = {
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID || "rzp_test_SkboVnjJ83LdEp",
+        amount: rzpOrder.amount,
+        currency: rzpOrder.currency,
+        name: "GramConnect Split Payment",
+        description: "Pay your share of the order",
+        order_id: rzpOrder.id,
+        handler: async function (response: any) {
+          await completePayment(contributorId, response.razorpay_payment_id, response.razorpay_order_id, response.razorpay_signature);
+        },
+        prefill: {
+          name: userInfo.name,
+          email: userInfo.email,
+        },
+        theme: {
+          color: "#16a34a",
+        },
+      };
+
+      const paymentObject = new (window as any).Razorpay(options);
+      paymentObject.open();
+
+    } catch (e: any) {
+      toast({ title: 'Error', description: e.message || 'Failed to process payment', variant: 'destructive' });
+    }
+  };
+
+  const completePayment = async (contributorId: string, paymentId: string, orderId: string, signature: string) => {
+    try {
       const res = await fetch(`/api/split-payments/${groupId}/contribute`, {
         method: 'POST',
         headers: {
@@ -61,9 +114,9 @@ export default function SplitPayment() {
         },
         body: JSON.stringify({
           contributorId,
-          razorpay_payment_id: mockPaymentId,
-          razorpay_order_id: mockOrderId,
-          razorpay_signature: mockSignature
+          razorpay_payment_id: paymentId,
+          razorpay_order_id: orderId,
+          razorpay_signature: signature
         })
       });
 

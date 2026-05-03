@@ -2,6 +2,8 @@ import asyncHandler from "express-async-handler";
 import crypto from "crypto";
 import SplitPayment from "../models/SplitPayment.js";
 import Order from "../models/Order.js";
+import User from "../models/User.js";
+import Notification from "../models/Notification.js";
 
 // @desc    Initiate a Split Payment
 // @route   POST /api/split-payments/initiate
@@ -18,18 +20,48 @@ const initiateSplitPayment = asyncHandler(async (req, res) => {
 
   const groupId = crypto.randomBytes(8).toString("hex");
 
+  const processedContributors = await Promise.all(contributors.map(async (c) => {
+    let userId = c.userId;
+    let name = c.name;
+
+    if (c.email) {
+      const user = await User.findOne({ email: c.email });
+      if (user) {
+        userId = user._id;
+        name = user.name;
+      } else {
+        name = name || c.email;
+      }
+    }
+
+    return {
+      userId,
+      name,
+      amountAllocated: c.amountAllocated,
+      status: "pending",
+    };
+  }));
+
   const splitPayment = await SplitPayment.create({
     orderId,
     groupId,
     initiatorId: req.user._id,
     totalAmount: order.totalAmount,
-    contributors: contributors.map(c => ({
-      userId: c.userId, // Can be null if unregistered
-      name: c.name,
-      amountAllocated: c.amountAllocated,
-      status: "pending",
-    }))
+    contributors: processedContributors
   });
+
+  // Create notifications for registered friends
+  for (const c of processedContributors) {
+    if (c.userId && c.userId.toString() !== req.user._id.toString()) {
+      await Notification.create({
+        user: c.userId,
+        title: "Split Payment Request",
+        message: `${req.user.name} has requested you to pay ₹${c.amountAllocated} for a shared order.`,
+        type: "system",
+        link: `/consumer/split-payment/${groupId}`
+      });
+    }
+  }
 
   res.status(201).json(splitPayment);
 });
@@ -48,6 +80,66 @@ const getSplitPayment = asyncHandler(async (req, res) => {
   }
 
   res.json(splitPayment);
+});
+
+// @desc    Create Razorpay Order for Split Payment Contributor
+// @route   POST /api/split-payments/:groupId/create-order
+// @access  Private
+const createContributorOrder = asyncHandler(async (req, res) => {
+  const { contributorId } = req.body;
+  const splitPayment = await SplitPayment.findOne({ groupId: req.params.groupId });
+
+  if (!splitPayment) {
+    res.status(404);
+    throw new Error("Split payment not found");
+  }
+
+  const contributor = splitPayment.contributors.id(contributorId);
+  if (!contributor) {
+    res.status(404);
+    throw new Error("Contributor not found");
+  }
+
+  const key_id = process.env.RAZORPAY_KEY_ID;
+  const key_secret = process.env.RAZORPAY_KEY_SECRET;
+  const isTestMode = !key_id || key_id === "rzp_test_dummykey123";
+
+  if (isTestMode) {
+    return res.json({
+      id: `order_test_${Date.now()}`,
+      amount: Math.round(contributor.amountAllocated * 100),
+      currency: "INR",
+      _testMode: true
+    });
+  }
+
+  const body = {
+    amount: Math.round(contributor.amountAllocated * 100),
+    currency: "INR",
+    receipt: `receipt_split_${contributor._id}`
+  };
+
+  const auth = Buffer.from(`${key_id}:${key_secret}`).toString("base64");
+  const response = await fetch("https://api.razorpay.com/v1/orders", {
+    method: "POST",
+    headers: {
+      "Authorization": `Basic ${auth}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(body)
+  });
+
+  if (!response.ok) {
+    res.status(500);
+    throw new Error("Failed to create Razorpay order");
+  }
+
+  const razorpayOrder = await response.json();
+  res.json({
+    id: razorpayOrder.id,
+    amount: razorpayOrder.amount,
+    currency: razorpayOrder.currency
+  });
 });
 
 // @desc    Contribute to Split Payment
@@ -115,4 +207,4 @@ const contributeSplitPayment = asyncHandler(async (req, res) => {
   res.json({ message: "Contribution successful", splitPayment });
 });
 
-export { initiateSplitPayment, getSplitPayment, contributeSplitPayment };
+export { initiateSplitPayment, getSplitPayment, contributeSplitPayment, createContributorOrder };

@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { useCart } from '@/context/CartContext';
 import { useToast } from '@/components/ui/use-toast';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { DeliverySlotPicker } from '@/components/checkout/DeliverySlotPicker';
 import { ProductCategory } from '@/types';
 
@@ -38,6 +39,8 @@ const Cart = () => {
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [contactPhone, setContactPhone] = useState('');
   const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
+  const [friendEmail, setFriendEmail] = useState('');
+  const [isSplitDialogOpen, setIsSplitDialogOpen] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
   const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
@@ -187,6 +190,11 @@ const Cart = () => {
       return;
     }
 
+    if (!friendEmail) {
+      toast({ title: 'Error', description: 'Please enter a friend\'s email or User ID', variant: 'destructive' });
+      return;
+    }
+
     try {
       const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
       if (!userInfo.token) {
@@ -237,7 +245,7 @@ const Cart = () => {
           orderId: order._id,
           contributors: [
             { userId: userInfo._id, name: userInfo.name || 'You', amountAllocated: halfAmount },
-            { userId: null, name: 'Your Friend', amountAllocated: halfAmount },
+            { email: friendEmail, name: 'Your Friend', amountAllocated: halfAmount },
           ]
         }),
       });
@@ -246,6 +254,7 @@ const Cart = () => {
       const splitData = await splitRes.json();
 
       clearCart();
+      setIsSplitDialogOpen(false);
       toast({ title: 'Group Payment Created', description: 'Redirecting to split payment page...' });
       navigate(`/consumer/split-payment/${splitData.groupId}`);
 
@@ -435,9 +444,30 @@ const Cart = () => {
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </Button>
 
-                    <Button className="w-full" variant="outline" size="lg" onClick={handleSplitPayment}>
-                      Split Payment with Friends
-                    </Button>
+                    <Dialog open={isSplitDialogOpen} onOpenChange={setIsSplitDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button className="w-full" variant="outline" size="lg">
+                          Split Payment with Friends
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Split Payment</DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4 py-4">
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium">Friend's Email or User ID</label>
+                            <Input 
+                              placeholder="e.g., friend@example.com" 
+                              value={friendEmail} 
+                              onChange={(e) => setFriendEmail(e.target.value)} 
+                            />
+                            <p className="text-xs text-muted-foreground">They will receive a notification and link to pay their half (₹{total / 2}).</p>
+                          </div>
+                          <Button className="w-full" onClick={handleSplitPayment}>Confirm Split</Button>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
                   </div>
 
                   <p className="text-xs text-muted-foreground text-center mt-4">
