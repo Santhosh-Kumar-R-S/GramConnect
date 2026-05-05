@@ -18,6 +18,10 @@ const farmers = [
         district: 'Warangal',
         state: 'Telangana',
         status: 'approved',
+        geoCoordinates: {
+            type: 'Point',
+            coordinates: [79.5941, 18.0000] // Warangal approx
+        }
     },
     {
         name: 'Lakshmi Devi',
@@ -29,6 +33,10 @@ const farmers = [
         district: 'Annamayya',
         state: 'Andhra Pradesh',
         status: 'approved',
+        geoCoordinates: {
+            type: 'Point',
+            coordinates: [78.5000, 13.5500] // Madanapalle approx
+        }
     },
     {
         name: 'Suresh Patil',
@@ -40,6 +48,10 @@ const farmers = [
         district: 'Dharwad',
         state: 'Karnataka',
         status: 'approved',
+        geoCoordinates: {
+            type: 'Point',
+            coordinates: [75.1240, 15.3647] // Hubli approx
+        }
     },
 ];
 

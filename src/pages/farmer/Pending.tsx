@@ -1,9 +1,70 @@
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Clock, CheckCircle, Mail, Phone, Leaf } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Clock, CheckCircle, Mail, Phone, Leaf, RefreshCw } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
 
 const FarmerPending = () => {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const [isChecking, setIsChecking] = useState(false);
+
+  const checkStatus = async (manual = false) => {
+    const userInfoStr = localStorage.getItem('userInfo');
+    if (!userInfoStr) return;
+    
+    try {
+      if (manual) setIsChecking(true);
+      const userInfo = JSON.parse(userInfoStr);
+      
+      const res = await fetch('/api/auth/profile', {
+        headers: {
+          Authorization: `Bearer ${userInfo.token}`,
+        },
+      });
+
+      if (res.ok) {
+        const userData = await res.json();
+        if (userData.status === 'approved') {
+          // Update local storage
+          const updatedUserInfo = { ...userInfo, user: { ...userInfo.user, ...userData } };
+          localStorage.setItem('userInfo', JSON.stringify(updatedUserInfo));
+          
+          toast({
+            title: "Account Approved!",
+            description: "You can now access your dashboard.",
+          });
+          navigate('/farmer/dashboard');
+        } else if (manual) {
+          toast({
+            title: "Still Pending",
+            description: "Your account is still under review.",
+          });
+        }
+      } else if (res.status === 401) {
+        // Handle missing or invalid token
+        localStorage.removeItem('userInfo');
+        toast({
+          variant: "destructive",
+          title: "Session Expired",
+          description: "Please log in again to check your status.",
+        });
+        navigate('/login');
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      if (manual) setIsChecking(false);
+    }
+  };
+
+  useEffect(() => {
+    checkStatus(); // Check immediately on mount
+    const interval = setInterval(() => checkStatus(), 10000); // Poll every 10s
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <div className="min-h-screen bg-muted/30 flex items-center justify-center p-4">
       <motion.div
@@ -66,7 +127,15 @@ const FarmerPending = () => {
             </div>
           </div>
 
-          <div className="mt-6 pt-6 border-t border-border">
+          <div className="mt-6 pt-6 border-t border-border flex flex-col gap-3">
+            <Button 
+              className="w-full gap-2" 
+              onClick={() => checkStatus(true)}
+              disabled={isChecking}
+            >
+              <RefreshCw className={`h-4 w-4 ${isChecking ? 'animate-spin' : ''}`} />
+              {isChecking ? 'Checking Status...' : 'Check Status Again'}
+            </Button>
             <Button variant="outline" asChild className="w-full">
               <Link to="/">Return to Home</Link>
             </Button>

@@ -38,7 +38,11 @@ const Login = () => {
         });
 
         if (data.user.role === 'farmer') {
-          navigate('/farmer/dashboard');
+          if (data.user.status === 'pending') {
+            navigate('/farmer/pending');
+          } else {
+            navigate('/farmer/dashboard');
+          }
         } else if (data.user.role === 'admin') {
           navigate('/admin/dashboard');
         } else {

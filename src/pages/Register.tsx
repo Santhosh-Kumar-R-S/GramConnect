@@ -34,6 +34,9 @@ const Register = () => {
     // Consumer specific
     city: '',
     address: '',
+    // Coordinates
+    lat: null as number | null,
+    lng: null as number | null,
   });
 
   const updateField = (field: string, value: string) => {
@@ -281,6 +284,37 @@ const Register = () => {
                           required
                         />
                       </div>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label>Farm Location (Required for Map)</Label>
+                      <div className="flex items-center gap-3">
+                        <Button
+                          type="button"
+                          variant={formData.lat ? "default" : "outline"}
+                          className="w-full gap-2"
+                          onClick={() => {
+                            if (!navigator.geolocation) {
+                              toast({ title: "Error", description: "Geolocation not supported" });
+                              return;
+                            }
+                            navigator.geolocation.getCurrentPosition(
+                              (pos) => {
+                                updateField('lat', pos.coords.latitude.toString());
+                                updateField('lng', pos.coords.longitude.toString());
+                                toast({ title: "Success", description: "Location captured!" });
+                              },
+                              () => toast({ title: "Error", description: "Could not get location" })
+                            );
+                          }}
+                        >
+                          <MapPin className="h-4 w-4" />
+                          {formData.lat ? "Location Captured ✓" : "Get Current Location"}
+                        </Button>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        We need your location so consumers can find you on the map.
+                      </p>
                     </div>
                   </>
                 ) : (

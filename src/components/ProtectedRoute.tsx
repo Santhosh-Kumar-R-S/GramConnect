@@ -17,15 +17,30 @@ const ProtectedRoute = ({ allowedRoles }: ProtectedRouteProps) => {
         try {
             const userInfo = JSON.parse(userInfoStr);
             const userRole = userInfo?.user?.role || userInfo?.role;
+            const userStatus = userInfo?.user?.status || userInfo?.status;
             
             if (!allowedRoles.includes(userRole)) {
                 // Redirect to the correct dashboard based on their actual role
                 if (userRole === 'farmer') {
+                    if (userStatus === 'pending') {
+                        return <Navigate to="/farmer/pending" replace />;
+                    }
                     return <Navigate to="/farmer/dashboard" replace />;
                 } else if (userRole === 'admin') {
                     return <Navigate to="/admin/dashboard" replace />;
                 } else {
                     return <Navigate to="/consumer/dashboard" replace />;
+                }
+            } else {
+                // They have the right role, but check specific path restrictions
+                if (userRole === 'farmer') {
+                    const currentPath = window.location.pathname;
+                    if (userStatus === 'pending' && currentPath !== '/farmer/pending') {
+                        return <Navigate to="/farmer/pending" replace />;
+                    }
+                    if (userStatus === 'approved' && currentPath === '/farmer/pending') {
+                        return <Navigate to="/farmer/dashboard" replace />;
+                    }
                 }
             }
         } catch {

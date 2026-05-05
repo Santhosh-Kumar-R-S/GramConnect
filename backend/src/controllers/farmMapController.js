@@ -69,7 +69,7 @@ const getFarmerProfile = asyncHandler(async (req, res) => {
   const { farmerId } = req.params;
 
   const user = await User.findById(farmerId)
-    .select("name village location geoCoordinates crops pincode createdAt");
+    .select("name village location geoCoordinates crops pincode createdAt role");
 
   if (!user || user.role !== "farmer") {
     res.status(404);
