@@ -166,8 +166,8 @@ const Cart = () => {
           }
         },
         prefill: {
-          name: userInfo.name,
-          email: userInfo.email,
+          name: userInfo?.user?.name || userInfo?.name,
+          email: userInfo?.user?.email || userInfo?.email,
           contact: contactPhone,
         },
         theme: {
@@ -197,6 +197,7 @@ const Cart = () => {
 
     try {
       const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+      const currentUserId = userInfo?.user?.id || userInfo?.user?._id || userInfo?.id || userInfo?._id;
       if (!userInfo.token) {
         toast({ title: 'Error', description: 'Please login to place an order', variant: 'destructive' });
         return;
@@ -244,7 +245,7 @@ const Cart = () => {
         body: JSON.stringify({
           orderId: order._id,
           contributors: [
-            { userId: userInfo._id, name: userInfo.name || 'You', amountAllocated: halfAmount },
+            { userId: currentUserId, name: userInfo?.user?.name || userInfo?.name || 'You', amountAllocated: halfAmount },
             { email: friendEmail, name: 'Your Friend', amountAllocated: halfAmount },
           ]
         }),

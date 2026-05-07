@@ -24,23 +24,36 @@ export function NotificationBell() {
 
     const fetchNotifications = async () => {
       try {
-        const res = await fetch('/api/negotiations', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        if (res.ok) {
-          const data = await res.json();
-          let filtered = [];
-          
+        const [negRes, notifRes] = await Promise.all([
+          fetch('/api/negotiations', { headers: { Authorization: `Bearer ${token}` } }),
+          fetch('/api/notifications', { headers: { Authorization: `Bearer ${token}` } })
+        ]);
+
+        let combined: any[] = [];
+
+        if (negRes.ok) {
+          const negData = await negRes.json();
           if (userRole === 'farmer') {
-            // Farmers see PENDING requests
-            filtered = data.filter((n: any) => n.status === 'PENDING' && !dismissedIds.includes(n._id));
+            combined = [...combined, ...negData.filter((n: any) => n.status === 'PENDING' && !dismissedIds.includes(n._id))];
           } else if (userRole === 'consumer') {
-            // Consumers see ACCEPTED or REJECTED requests
-            filtered = data.filter((n: any) => (n.status === 'ACCEPTED' || n.status === 'REJECTED') && !dismissedIds.includes(n._id));
+            combined = [...combined, ...negData.filter((n: any) => (n.status === 'ACCEPTED' || n.status === 'REJECTED') && !dismissedIds.includes(n._id))];
           }
-          
-          setNotifications(filtered);
         }
+
+        if (notifRes.ok) {
+          const notifData = await notifRes.json();
+          // Add standard notifications
+          combined = [...combined, ...notifData.filter((n: any) => !dismissedIds.includes(n._id))];
+        }
+
+        // Sort combined array by date descending (newest first)
+        combined.sort((a, b) => {
+          const dateA = new Date(a.createdAt || Date.now()).getTime();
+          const dateB = new Date(b.createdAt || Date.now()).getTime();
+          return dateB - dateA;
+        });
+
+        setNotifications(combined);
       } catch (error) {
         console.error("Failed to fetch notifications", error);
       }
@@ -58,6 +71,7 @@ export function NotificationBell() {
     const updated = [...dismissedIds, id];
     setDismissedIds(updated);
     localStorage.setItem('dismissedNotifs', JSON.stringify(updated));
+    // Optional: Also call an API to mark it as read in the DB
   };
 
   const markAllAsRead = () => {
@@ -93,27 +107,39 @@ export function NotificationBell() {
               No new notifications
             </div>
           ) : (
-            notifications.map((notif) => (
-              <DropdownMenuItem key={notif._id} className="p-0 border-b last:border-0 relative group">
-                <Link to={`/${userRole}/dashboard`} className="flex flex-col gap-1 w-full p-4 pr-10 focus:bg-muted hover:bg-muted cursor-pointer transition-colors outline-none">
-                  {userRole === 'farmer' ? (
-                    <>
-                      <span className="text-sm font-medium">New Offer Received</span>
-                      <span className="text-xs text-muted-foreground">
-                        {notif.consumer?.name} offered ₹{notif.requestedPrice}/{notif.product?.unit} for {notif.product?.name}
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      <span className="text-sm font-medium">
-                        Offer {notif.status === 'ACCEPTED' ? 'Accepted' : 'Rejected'}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        Farmer {notif.farmer?.name} has {notif.status.toLowerCase()} your offer for {notif.product?.name}
-                      </span>
-                    </>
-                  )}
-                </Link>
+            notifications.map((notif) => {
+              // Determine if it's a standard Notification or a Negotiation
+              const isStandardNotif = notif.title !== undefined || notif.type === 'system';
+              
+              return (
+                <DropdownMenuItem key={notif._id} className="p-0 border-b last:border-0 relative group">
+                  <Link 
+                    to={isStandardNotif && notif.link ? notif.link : `/${userRole}/dashboard`} 
+                    className="flex flex-col gap-1 w-full p-4 pr-10 focus:bg-muted hover:bg-muted cursor-pointer transition-colors outline-none"
+                  >
+                    {isStandardNotif ? (
+                      <>
+                        <span className="text-sm font-medium">{notif.title || 'Notification'}</span>
+                        <span className="text-xs text-muted-foreground">{notif.message}</span>
+                      </>
+                    ) : userRole === 'farmer' ? (
+                      <>
+                        <span className="text-sm font-medium">New Offer Received</span>
+                        <span className="text-xs text-muted-foreground">
+                          {notif.consumer?.name} offered ₹{notif.requestedPrice}/{notif.product?.unit} for {notif.product?.name}
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-sm font-medium">
+                          Offer {notif.status === 'ACCEPTED' ? 'Accepted' : 'Rejected'}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          Farmer {notif.farmer?.name} has {notif.status.toLowerCase()} your offer for {notif.product?.name}
+                        </span>
+                      </>
+                    )}
+                  </Link>
                 <button
                   onClick={(e) => markAsRead(e, notif._id)}
                   className="absolute top-3 right-3 text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
@@ -122,7 +148,8 @@ export function NotificationBell() {
                   <X className="h-4 w-4" />
                 </button>
               </DropdownMenuItem>
-            ))
+              );
+            })
           )}
         </div>
       </DropdownMenuContent>

@@ -201,6 +201,15 @@ const contributeSplitPayment = asyncHandler(async (req, res) => {
       order.paymentMethod = "Split/Group";
       await order.save();
     }
+
+    // Notify Initiator
+    await Notification.create({
+      user: splitPayment.initiatorId,
+      title: "Split Payment Completed",
+      message: `Your split payment group has fully paid the total amount of ₹${splitPayment.totalAmount}. The order is now officially placed!`,
+      type: "success",
+      link: "/consumer/orders"
+    });
   }
 
   await splitPayment.save();

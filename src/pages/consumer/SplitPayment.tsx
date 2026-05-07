@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Users, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
@@ -9,10 +9,12 @@ import { useToast } from '@/components/ui/use-toast';
 
 export default function SplitPayment() {
   const { groupId } = useParams<{ groupId: string }>();
+  const navigate = useNavigate();
   const [paymentData, setPaymentData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+  const currentUserId = userInfo?.user?.id || userInfo?.user?._id || userInfo?.id || userInfo?._id;
 
   // Razorpay Script Loader
   const loadScript = (src: string) => {
@@ -88,8 +90,8 @@ export default function SplitPayment() {
           await completePayment(contributorId, response.razorpay_payment_id, response.razorpay_order_id, response.razorpay_signature);
         },
         prefill: {
-          name: userInfo.name,
-          email: userInfo.email,
+          name: userInfo?.user?.name || userInfo?.name,
+          email: userInfo?.user?.email || userInfo?.email,
         },
         theme: {
           color: "#16a34a",
@@ -124,6 +126,12 @@ export default function SplitPayment() {
         const data = await res.json();
         setPaymentData(data.splitPayment);
         toast({ title: 'Success', description: 'Your share has been paid successfully!' });
+        
+        if (data.splitPayment.status === 'completed') {
+          setTimeout(() => {
+            navigate('/consumer/orders');
+          }, 2000);
+        }
       } else {
         const err = await res.json();
         toast({ title: 'Error', description: err.message, variant: 'destructive' });
@@ -180,7 +188,7 @@ export default function SplitPayment() {
                 {paymentData.contributors.map((c: any) => (
                   <div key={c._id} className="flex items-center justify-between p-4 rounded-lg border border-border bg-card">
                     <div>
-                      <p className="font-semibold">{c.name} {userInfo._id === c.userId && '(You)'}</p>
+                      <p className="font-semibold">{c.name} {currentUserId === c.userId && '(You)'}</p>
                       <p className="text-sm text-muted-foreground">Share: ₹{c.amountAllocated.toFixed(2)}</p>
                     </div>
                     <div>
@@ -189,7 +197,7 @@ export default function SplitPayment() {
                           <CheckCircle2 className="h-4 w-4 mr-1" /> Paid
                         </div>
                       ) : (
-                        userInfo._id === c.userId ? (
+                        currentUserId === c.userId ? (
                           <Button onClick={() => handlePayShare(c._id, c.amountAllocated)}>
                             Pay Share
                           </Button>

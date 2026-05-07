@@ -69,23 +69,23 @@ const Index = () => {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const response = await fetch('/api/products');
+        const response = await fetch('/api/products', { cache: 'no-store' });
         const data = await response.json();
 
         if (response.ok) {
           const formattedProducts = data.slice(0, 4).map((p: any) => ({
             id: p._id,
-            farmerId: p.farmer._id,
-            farmerName: p.farmer.name,
-            farmerVillage: p.farmer.village,
+            farmerId: p.farmer?._id || 'unknown',
+            farmerName: p.farmer?.name || 'Unknown Farmer',
+            farmerVillage: p.farmer?.village || 'Unknown Location',
             name: p.name,
             category: p.category,
             description: p.description,
             pricePerUnit: p.price || p.pricePerUnit,
             unit: p.unit,
             quantityAvailable: p.quantity || p.quantityAvailable,
-            harvestDate: new Date(p.harvestDate),
-            images: [],
+            harvestDate: p.harvestDate ? new Date(p.harvestDate) : null,
+            images: p.images || [],
             isOrganic: p.isOrganic,
             isAvailable: p.isAvailable,
           }));

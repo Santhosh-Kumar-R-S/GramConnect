@@ -11,6 +11,16 @@ const notificationSchema = new mongoose.Schema(
       type: String,
       required: true
     },
+    title: {
+      type: String
+    },
+    type: {
+      type: String,
+      default: 'system'
+    },
+    link: {
+      type: String
+    },
     data: {
       type: Object
     },
