@@ -59,12 +59,12 @@ export interface Product {
 
 // Order Types
 export type OrderStatus =
-  | 'pending'
-  | 'accepted'
-  | 'processing'
-  | 'shipped'
-  | 'delivered'
-  | 'cancelled';
+  | 'Pending'
+  | 'Accepted'
+  | 'Packed'
+  | 'Shipped'
+  | 'Delivered'
+  | 'Rejected';
 
 export interface OrderItem {
   productId: string;

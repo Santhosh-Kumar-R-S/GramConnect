@@ -65,6 +65,7 @@ const features = [
 
 const Index = () => {
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
+  const [activeCategories, setActiveCategories] = useState<string[]>([]);
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -73,6 +74,9 @@ const Index = () => {
         const data = await response.json();
 
         if (response.ok) {
+          const activeCats = Array.from(new Set(data.map((p: any) => p.category)));
+          setActiveCategories(activeCats as string[]);
+
           const formattedProducts = data.slice(0, 4).map((p: any) => ({
             id: p._id,
             farmerId: p.farmer?._id || 'unknown',
@@ -198,8 +202,8 @@ const Index = () => {
             </p>
           </motion.div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-4">
-            {categories.map((category, index) => (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-4 justify-center">
+            {categories.filter(category => activeCategories.includes(category.value)).map((category, index) => (
               <motion.div
                 key={category.value}
                 initial={{ opacity: 0, scale: 0.9 }}
