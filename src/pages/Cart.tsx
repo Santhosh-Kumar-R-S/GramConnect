@@ -312,8 +312,12 @@ const Cart = () => {
                   <Card>
                     <CardContent className="p-4">
                       <div className="flex gap-4">
-                        <div className="h-20 w-20 rounded-xl bg-gram-green-50 flex items-center justify-center text-3xl shrink-0">
-                          {categories.find(c => c.value === item.product.category)?.icon}
+                        <div className="h-20 w-20 rounded-xl bg-gram-green-50 flex items-center justify-center text-3xl shrink-0 overflow-hidden">
+                          {item.product.images && item.product.images.length > 0 ? (
+                            <img src={`http://localhost:5000${item.product.images[0]}`} alt={item.product.name} className="w-full h-full object-cover" />
+                          ) : (
+                            categories.find(c => c.value === item.product.category)?.icon
+                          )}
                         </div>
 
                         <div className="flex-1 min-w-0">

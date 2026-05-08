@@ -1,6 +1,7 @@
 import asyncHandler from "express-async-handler";
 import Order from "../models/Order.js";
 import DeliverySlot from "../models/DeliverySlot.js";
+import Product from "../models/Product.js";
 
 // @desc    Create new order
 // @route   POST /api/orders
@@ -91,6 +92,26 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
   if (!order) {
     res.status(404);
     throw new Error("Order not found");
+  }
+
+  if (status === "Accepted" && order.status !== "Accepted") {
+    // Check inventory first
+    for (const item of order.items) {
+      const product = await Product.findById(item.product);
+      if (product && product.quantity < item.quantity) {
+        res.status(400);
+        throw new Error(`Insufficient inventory for ${item.name}. Available: ${product.quantity}`);
+      }
+    }
+
+    // Deduct inventory
+    for (const item of order.items) {
+      const product = await Product.findById(item.product);
+      if (product) {
+        product.quantity -= item.quantity;
+        await product.save();
+      }
+    }
   }
 
   order.status = status;

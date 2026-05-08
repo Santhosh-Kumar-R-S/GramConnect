@@ -153,8 +153,12 @@ const FarmerProfile = () => {
                 <Card className="hover:shadow-md transition-shadow">
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between gap-3">
-                      <div className="h-12 w-12 rounded-xl bg-muted flex items-center justify-center text-2xl shrink-0">
-                        {CATEGORY_ICONS[product.category] || '📦'}
+                      <div className="h-12 w-12 rounded-xl bg-muted flex items-center justify-center text-2xl shrink-0 overflow-hidden">
+                        {product.images && product.images.length > 0 ? (
+                          <img src={`http://localhost:5000${product.images[0]}`} alt={product.name} className="w-full h-full object-cover" />
+                        ) : (
+                          CATEGORY_ICONS[product.category] || '📦'
+                        )}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">

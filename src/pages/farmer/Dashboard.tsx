@@ -16,6 +16,7 @@ import {
 import { useToast } from '@/components/ui/use-toast';
 import { Product, Order, ProductCategory } from '@/types';
 import { cn } from '@/lib/utils';
+import { OrderTimeline } from '@/components/orders/OrderTimeline';
 // Keeping categories configuration local or moved to a constants file. Reusing local definition for now.
 const categoriesList: { value: ProductCategory; label: string; icon: string }[] = [
   { value: 'vegetables', label: 'Vegetables', icon: '🥬' },
@@ -40,9 +41,9 @@ const FarmerDashboard = () => {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [editingUpdateId, setEditingUpdateId] = useState<string | null>(null);
   const [editCaption, setEditCaption] = useState('');
+  const [uploadingImage, setUploadingImage] = useState(false);
   const { toast } = useToast();
 
-  // Form State
   const [newProduct, setNewProduct] = useState({
     name: '',
     category: 'vegetables',
@@ -51,7 +52,8 @@ const FarmerDashboard = () => {
     quantityAvailable: '',
     harvestDate: '',
     description: '',
-    isOrganic: false
+    isOrganic: false,
+    imageUrl: ''
   });
 
   useEffect(() => {
@@ -77,9 +79,9 @@ const FarmerDashboard = () => {
           description: p.description,
           pricePerUnit: p.price || p.pricePerUnit,
           unit: p.unit,
-          quantityAvailable: p.quantity || p.quantityAvailable,
+          quantityAvailable: p.quantity !== undefined ? p.quantity : p.quantityAvailable,
           harvestDate: new Date(p.harvestDate),
-          images: [],
+          images: p.images || [],
           isOrganic: p.isOrganic,
           isAvailable: p.isAvailable,
           farmerId: userInfo.user?.id,
@@ -109,6 +111,7 @@ const FarmerDashboard = () => {
           })),
           totalAmount: o.totalAmount,
           status: o.status,
+          statusHistory: o.statusHistory || [],
           deliveryAddress: o.shippingAddress?.address || 'N/A',
           contactPhone: 'N/A', // Schema separation
           createdAt: new Date(o.createdAt),
@@ -144,6 +147,33 @@ const FarmerDashboard = () => {
     }
   };
 
+  const uploadFileHandler = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    const formData = new FormData();
+    formData.append('image', file);
+    setUploadingImage(true);
+
+    try {
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setNewProduct({ ...newProduct, imageUrl: data.imageUrl });
+        toast({ title: "Image Uploaded", description: "Image successfully uploaded." });
+      } else {
+        toast({ title: "Error", description: data.message || "Failed to upload image", variant: "destructive" });
+      }
+    } catch (err) {
+      toast({ title: "Error", description: "Failed to upload image", variant: "destructive" });
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
   const handleAddProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -151,7 +181,8 @@ const FarmerDashboard = () => {
       const payload = {
         ...newProduct,
         price: Number(newProduct.pricePerUnit),
-        quantity: Number(newProduct.quantityAvailable)
+        quantity: Number(newProduct.quantityAvailable),
+        images: newProduct.imageUrl ? [newProduct.imageUrl] : []
       };
 
       const res = await fetch('/api/products', {
@@ -169,7 +200,7 @@ const FarmerDashboard = () => {
         fetchData(); // Refresh list
         setNewProduct({
           name: '', category: 'vegetables', unit: 'kg', pricePerUnit: '',
-          quantityAvailable: '', harvestDate: '', description: '', isOrganic: false
+          quantityAvailable: '', harvestDate: '', description: '', isOrganic: false, imageUrl: ''
         });
       } else {
         const error = await res.json();
@@ -189,7 +220,8 @@ const FarmerDashboard = () => {
       quantityAvailable: product.quantityAvailable.toString() as any,
       harvestDate: product.harvestDate ? new Date(product.harvestDate).toISOString().split('T')[0] : '',
       description: product.description || '',
-      isOrganic: product.isOrganic || false
+      isOrganic: product.isOrganic || false,
+      imageUrl: product.images?.[0] || ''
     });
     setEditingProductId(product.id);
     setIsAddProductOpen(true);
@@ -398,7 +430,7 @@ const FarmerDashboard = () => {
   const stats = [
     { label: 'Active Products', value: products.length, icon: Package, color: 'text-primary' },
     { label: 'Total Orders', value: orders.length, icon: ShoppingBag, color: 'text-accent' },
-    { label: 'Pending Orders', value: orders.filter(o => o.status === 'pending').length, icon: Clock, color: 'text-amber-500' },
+    { label: 'Pending Orders', value: orders.filter(o => o.status === 'Pending').length, icon: Clock, color: 'text-amber-500' },
     { label: 'Total Earnings', value: `₹${orders.reduce((acc, o) => acc + o.totalAmount, 0)}`, icon: TrendingUp, color: 'text-green-600' }, // Simple calculation
   ];
 
@@ -500,6 +532,19 @@ const FarmerDashboard = () => {
                         onChange={e => setNewProduct({ ...newProduct, description: e.target.value })}
                         required
                       />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Product Image</Label>
+                      <Input
+                        type="file"
+                        accept="image/*"
+                        onChange={uploadFileHandler}
+                        disabled={uploadingImage}
+                      />
+                      {uploadingImage && <p className="text-sm text-muted-foreground mt-1">Uploading...</p>}
+                      {newProduct.imageUrl && !uploadingImage && (
+                        <p className="text-sm text-green-600 mt-1">Image uploaded successfully</p>
+                      )}
                     </div>
                     <div className="flex items-center gap-2">
                       <input
@@ -604,15 +649,21 @@ const FarmerDashboard = () => {
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4">
-                        <div className="h-16 w-16 rounded-lg bg-gram-green-50 flex items-center justify-center text-3xl">
-                          {categoriesList.find(c => c.value === product.category)?.icon}
+                        <div className="h-16 w-16 rounded-lg bg-gram-green-50 flex items-center justify-center text-3xl overflow-hidden shrink-0">
+                          {product.images && product.images.length > 0 ? (
+                            <img src={`http://localhost:5000${product.images[0]}`} alt={product.name} className="w-full h-full object-cover" />
+                          ) : (
+                            categoriesList.find(c => c.value === product.category)?.icon
+                          )}
                         </div>
                         <div>
                           <h3 className="font-semibold">{product.name}</h3>
                           <p className="text-sm text-muted-foreground capitalize">{product.category}</p>
-                          <div className="flex items-center gap-4 mt-1">
+                          <div className="flex items-center gap-4 mt-2">
                             <span className="text-primary font-medium">₹{product.pricePerUnit}/{product.unit}</span>
-                            <span className="text-sm text-muted-foreground">{product.quantityAvailable} {product.unit} available</span>
+                            <span className="text-sm font-medium px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 flex items-center gap-1">
+                              📦 {product.quantityAvailable} {product.unit} left in stock
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -652,12 +703,12 @@ const FarmerDashboard = () => {
                           <span className="text-sm text-muted-foreground">Order #{order.id}</span>
                           <span className={cn(
                             "px-2 py-0.5 rounded-full text-xs font-medium",
-                            order.status === 'pending' && "bg-amber-100 text-amber-700",
-                            order.status === 'accepted' && "bg-blue-100 text-blue-700",
-                            order.status === 'processing' && "bg-purple-100 text-purple-700",
-                            order.status === 'shipped' && "bg-cyan-100 text-cyan-700",
-                            order.status === 'delivered' && "bg-green-100 text-green-700",
-                            order.status === 'cancelled' && "bg-red-100 text-red-700",
+                            order.status === 'Pending' && "bg-amber-100 text-amber-700",
+                            order.status === 'Accepted' && "bg-blue-100 text-blue-700",
+                            order.status === 'Packed' && "bg-purple-100 text-purple-700",
+                            order.status === 'Shipped' && "bg-cyan-100 text-cyan-700",
+                            order.status === 'Delivered' && "bg-green-100 text-green-700",
+                            order.status === 'Rejected' && "bg-red-100 text-red-700",
                           )}>
                             {order.status}
                           </span>
@@ -676,23 +727,23 @@ const FarmerDashboard = () => {
                       <div className="flex flex-col items-end gap-2">
                         <span className="text-xl font-bold text-primary">₹{order.totalAmount}</span>
                         <div className="flex gap-2 flex-wrap justify-end">
-                          {order.status === 'pending' && (
-                            <Button size="sm" className="bg-blue-600 hover:bg-blue-700" onClick={() => handleStatusUpdate(order.id, 'accepted')}>
+                          {order.status === 'Pending' && (
+                            <Button size="sm" className="bg-blue-600 hover:bg-blue-700" onClick={() => handleStatusUpdate(order.id, 'Accepted')}>
                               <Check className="h-4 w-4 mr-1" /> Accept
                             </Button>
                           )}
-                          {order.status === 'accepted' && (
-                            <Button size="sm" className="bg-purple-600 hover:bg-purple-700" onClick={() => handleStatusUpdate(order.id, 'processing')}>
+                          {order.status === 'Accepted' && (
+                            <Button size="sm" className="bg-purple-600 hover:bg-purple-700" onClick={() => handleStatusUpdate(order.id, 'Packed')}>
                               📦 Pack
                             </Button>
                           )}
-                          {order.status === 'processing' && (
-                            <Button size="sm" className="bg-cyan-600 hover:bg-cyan-700" onClick={() => handleStatusUpdate(order.id, 'shipped')}>
+                          {order.status === 'Packed' && (
+                            <Button size="sm" className="bg-cyan-600 hover:bg-cyan-700" onClick={() => handleStatusUpdate(order.id, 'Shipped')}>
                               <Truck className="h-4 w-4 mr-1" /> Ship
                             </Button>
                           )}
-                          {order.status === 'shipped' && (
-                            <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => handleStatusUpdate(order.id, 'delivered')}>
+                          {order.status === 'Shipped' && (
+                            <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => handleStatusUpdate(order.id, 'Delivered')}>
                               📍 Deliver
                             </Button>
                           )}
@@ -1006,12 +1057,12 @@ const FarmerDashboard = () => {
                 <span className="text-sm text-muted-foreground">Order #{selectedOrder.id}</span>
                 <span className={cn(
                   "px-2 py-0.5 rounded-full text-xs font-medium",
-                  selectedOrder.status === 'pending' && "bg-amber-100 text-amber-700",
-                  selectedOrder.status === 'accepted' && "bg-blue-100 text-blue-700",
-                  selectedOrder.status === 'processing' && "bg-purple-100 text-purple-700",
-                  selectedOrder.status === 'shipped' && "bg-cyan-100 text-cyan-700",
-                  selectedOrder.status === 'delivered' && "bg-green-100 text-green-700",
-                  selectedOrder.status === 'cancelled' && "bg-red-100 text-red-700",
+                  selectedOrder.status === 'Pending' && "bg-amber-100 text-amber-700",
+                  selectedOrder.status === 'Accepted' && "bg-blue-100 text-blue-700",
+                  selectedOrder.status === 'Packed' && "bg-purple-100 text-purple-700",
+                  selectedOrder.status === 'Shipped' && "bg-cyan-100 text-cyan-700",
+                  selectedOrder.status === 'Delivered' && "bg-green-100 text-green-700",
+                  selectedOrder.status === 'Rejected' && "bg-red-100 text-red-700",
                 )}>
                   {selectedOrder.status}
                 </span>
@@ -1043,12 +1094,40 @@ const FarmerDashboard = () => {
                 </div>
               </div>
 
-              <div className="flex justify-between items-center pt-2 border-t">
+              <div className="flex justify-between items-center pt-2 border-t mb-4">
                 <span className="font-medium">Total Amount</span>
                 <span className="text-xl font-bold text-primary">₹{selectedOrder.totalAmount}</span>
               </div>
 
-              <p className="text-xs text-muted-foreground text-center">
+              <OrderTimeline
+                currentStatus={selectedOrder.status}
+                statusHistory={selectedOrder.statusHistory || []}
+              />
+
+              <div className="flex gap-2 flex-wrap justify-center border-t border-border pt-4 mt-2">
+                {selectedOrder.status === 'Pending' && (
+                  <Button size="sm" className="bg-blue-600 hover:bg-blue-700 w-full" onClick={() => handleStatusUpdate(selectedOrder.id, 'Accepted')}>
+                    <Check className="h-4 w-4 mr-1" /> Accept Order
+                  </Button>
+                )}
+                {selectedOrder.status === 'Accepted' && (
+                  <Button size="sm" className="bg-purple-600 hover:bg-purple-700 w-full" onClick={() => handleStatusUpdate(selectedOrder.id, 'Packed')}>
+                    📦 Mark as Packed
+                  </Button>
+                )}
+                {selectedOrder.status === 'Packed' && (
+                  <Button size="sm" className="bg-cyan-600 hover:bg-cyan-700 w-full" onClick={() => handleStatusUpdate(selectedOrder.id, 'Shipped')}>
+                    <Truck className="h-4 w-4 mr-1" /> Mark as Shipped
+                  </Button>
+                )}
+                {selectedOrder.status === 'Shipped' && (
+                  <Button size="sm" className="bg-green-600 hover:bg-green-700 w-full" onClick={() => handleStatusUpdate(selectedOrder.id, 'Delivered')}>
+                    📍 Mark as Delivered
+                  </Button>
+                )}
+              </div>
+
+              <p className="text-xs text-muted-foreground text-center mt-2">
                 Ordered on {selectedOrder.createdAt.toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' })}
               </p>
             </div>

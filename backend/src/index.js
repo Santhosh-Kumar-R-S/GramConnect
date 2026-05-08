@@ -19,6 +19,7 @@ import certificationRoutes from "./routes/certificationRoutes.js";
 import updateRoutes from "./routes/updateRoutes.js";
 import walletRoutes from "./routes/walletRoutes.js";
 import splitPaymentRoutes from "./routes/splitPaymentRoutes.js";
+import uploadRoutes from "./routes/uploadRoutes.js";
 import { notFound, errorHandler } from "./middleware/errorMiddleware.js";
 
 dotenv.config();
@@ -54,6 +55,7 @@ app.use("/api/farm-updates", updateRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/wallet", walletRoutes);
 app.use("/api/split-payments", splitPaymentRoutes);
+app.use("/api/upload", uploadRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

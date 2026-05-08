@@ -42,7 +42,11 @@ export const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
     >
       {/* Image Placeholder */}
       <div className="relative h-48 bg-gradient-to-br from-gram-green-100 to-gram-green-50 flex items-center justify-center overflow-hidden">
-        <span className="text-6xl">{getCategoryEmoji(product.category)}</span>
+        {product.images && product.images.length > 0 ? (
+          <img src={`http://localhost:5000${product.images[0]}`} alt={product.name} className="w-full h-full object-cover" />
+        ) : (
+          <span className="text-6xl">{getCategoryEmoji(product.category)}</span>
+        )}
 
         {/* Badges */}
         <div className="absolute top-3 left-3 flex flex-col items-start gap-1">
