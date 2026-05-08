@@ -29,6 +29,7 @@ const ConsumerDashboard = () => {
   const [activeTab, setActiveTab] = useState<'orders' | 'negotiations'>('orders');
   const [consumerOrders, setConsumerOrders] = useState<Order[]>([]);
   const [recentProducts, setRecentProducts] = useState<Product[]>([]);
+  const [activeCategories, setActiveCategories] = useState<string[]>([]);
   const [negotiations, setNegotiations] = useState<any[]>([]);
   const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
 
@@ -104,11 +105,13 @@ const ConsumerDashboard = () => {
             unit: p.unit,
             quantityAvailable: p.quantity || p.quantityAvailable,
             harvestDate: new Date(p.harvestDate),
-            images: [],
+            images: p.images || [],
             isOrganic: p.isOrganic,
             isAvailable: p.isAvailable,
           }));
           setRecentProducts(formattedProducts);
+          const activeCats = Array.from(new Set(productData.map((p: any) => p.category)));
+          setActiveCategories(activeCats as string[]);
         }
 
       } catch (error) {
@@ -162,7 +165,7 @@ const ConsumerDashboard = () => {
               <Card>
                 <CardContent className="p-4 text-center">
                   <Clock className="h-8 w-8 text-amber-500 mx-auto mb-2" />
-                  <p className="text-2xl font-bold">{consumerOrders.filter(o => o.status === 'pending').length}</p>
+                  <p className="text-2xl font-bold">{consumerOrders.filter(o => o.status === 'Pending').length}</p>
                   <p className="text-sm text-muted-foreground">In Progress</p>
                 </CardContent>
               </Card>
@@ -244,12 +247,12 @@ const ConsumerDashboard = () => {
                               <span className="text-sm font-medium">Order #{order.id}</span>
                               <span className={cn(
                                 "px-2 py-0.5 rounded-full text-xs font-medium",
-                                order.status === 'pending'   && "bg-amber-100 text-amber-700",
-                                order.status === 'accepted'  && "bg-blue-100 text-blue-700",
-                                order.status === 'processing'    && "bg-purple-100 text-purple-700",
-                                order.status === 'shipped'   && "bg-cyan-100 text-cyan-700",
-                                order.status === 'delivered' && "bg-green-100 text-green-700",
-                                order.status === 'cancelled'  && "bg-red-100 text-red-700",
+                                order.status === 'Pending'   && "bg-amber-100 text-amber-700",
+                                order.status === 'Accepted'  && "bg-blue-100 text-blue-700",
+                                order.status === 'Packed'    && "bg-purple-100 text-purple-700",
+                                order.status === 'Shipped'   && "bg-cyan-100 text-cyan-700",
+                                order.status === 'Delivered' && "bg-green-100 text-green-700",
+                                order.status === 'Rejected'  && "bg-red-100 text-red-700",
                               )}>
                                 {order.status}
                               </span>
@@ -295,12 +298,12 @@ const ConsumerDashboard = () => {
                             <span className="flex items-center gap-2 font-medium">
                               <span className={cn(
                                 "h-2.5 w-2.5 rounded-full",
-                                order.status === 'pending'   && "bg-amber-400",
-                                order.status === 'accepted'  && "bg-blue-400",
-                                order.status === 'processing'    && "bg-purple-400",
-                                order.status === 'shipped'   && "bg-cyan-400",
-                                order.status === 'delivered' && "bg-green-500",
-                                order.status === 'cancelled'  && "bg-red-400",
+                                order.status === 'Pending'   && "bg-amber-400",
+                                order.status === 'Accepted'  && "bg-blue-400",
+                                order.status === 'Packed'    && "bg-purple-400",
+                                order.status === 'Shipped'   && "bg-cyan-400",
+                                order.status === 'Delivered' && "bg-green-500",
+                                order.status === 'Rejected'  && "bg-red-400",
                               )} />
                               {order.status}
                             </span>
@@ -401,8 +404,12 @@ const ConsumerDashboard = () => {
                     <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => addToCart(product)}>
                       <CardContent className="p-3">
                         <div className="flex items-center gap-3">
-                          <div className="h-12 w-12 rounded-lg bg-gram-green-50 flex items-center justify-center text-2xl shrink-0">
-                            {categories.find(c => c.value === product.category)?.icon}
+                          <div className="h-12 w-12 rounded-lg bg-gram-green-50 flex items-center justify-center text-2xl shrink-0 overflow-hidden">
+                            {product.images && product.images.length > 0 ? (
+                              <img src={`http://localhost:5000${product.images[0]}`} alt={product.name} className="w-full h-full object-cover" />
+                            ) : (
+                              categories.find(c => c.value === product.category)?.icon
+                            )}
                           </div>
                           <div className="flex-1 min-w-0">
                             <h3 className="font-medium text-sm truncate">{product.name}</h3>
@@ -426,7 +433,7 @@ const ConsumerDashboard = () => {
               <div className="mt-6">
                 <h3 className="text-sm font-medium text-muted-foreground mb-3">Shop by Category</h3>
                 <div className="grid grid-cols-4 gap-2">
-                  {categories.slice(0, 4).map((cat) => (
+                  {categories.filter(cat => activeCategories.includes(cat.value)).slice(0, 4).map((cat) => (
                     <Link
                       key={cat.value}
                       to={`/products?category=${cat.value}`}

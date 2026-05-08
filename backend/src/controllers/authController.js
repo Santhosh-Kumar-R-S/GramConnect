@@ -44,7 +44,10 @@ const registerUser = asyncHandler(async (req, res) => {
       name: user.name,
       email: user.email,
       role: user.role,
-      status: user.status
+      status: user.status,
+      village: user.village,
+      location: user.location,
+      pincode: user.pincode
     }
   });
 });
@@ -74,7 +77,10 @@ const loginUser = asyncHandler(async (req, res) => {
       name: user.name,
       email: user.email,
       role: user.role,
-      status: user.status
+      status: user.status,
+      village: user.village,
+      location: user.location,
+      pincode: user.pincode
     }
   });
 });
@@ -116,7 +122,10 @@ const verifyOtp = asyncHandler(async (req, res) => {
       name: user.name,
       email: user.email,
       role: user.role,
-      status: user.status
+      status: user.status,
+      village: user.village,
+      location: user.location,
+      pincode: user.pincode
     }
   });
 });
