@@ -52,6 +52,8 @@ const AdminDashboard = () => {
   const [certifications, setCertifications] = useState<any[]>([]);
   const [selectedFarmer, setSelectedFarmer] = useState<any>(null);
   const [viewingActivity, setViewingActivity] = useState(false);
+  const [viewingEarnings, setViewingEarnings] = useState<any>(null);
+  const [earningsDetails, setEarningsDetails] = useState<any>(null);
 
   const fetchPendingApprovals = async () => {
     try {
@@ -131,7 +133,7 @@ const AdminDashboard = () => {
       fetchCertifications();
 
       // Fetch All Orders
-      const orderRes = await fetch('/api/orders', {
+      const orderRes = await fetch('/api/admin/orders', {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (orderRes.ok) {
@@ -143,7 +145,8 @@ const AdminDashboard = () => {
           totalAmount: o.totalAmount,
           status: o.status,
           createdAt: o.createdAt,
-          items: o.items || []
+          items: o.items || [],
+          farmerName: o.items && o.items.length > 0 && o.items[0].farmer ? o.items[0].farmer.name : 'Multiple Farmers'
         })));
       }
 
@@ -175,6 +178,38 @@ const AdminDashboard = () => {
   useEffect(() => {
     fetchData();
   }, []);
+
+  const handleClearEarnings = async (farmerId: string) => {
+    if (!confirm("Are you sure you want to mark all pending earnings as paid?")) return;
+    try {
+      const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+      const res = await fetch(`/api/admin/farmers/${farmerId}/clear-earnings`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${userInfo.token}` }
+      });
+      if (res.ok) {
+        fetchData(); // Refresh orders state to update calculations
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleViewEarnings = async (farmer: any) => {
+    setViewingEarnings(farmer);
+    setEarningsDetails(null);
+    try {
+      const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+      const res = await fetch(`/api/admin/farmers/${farmer._id}/earnings`, {
+        headers: { Authorization: `Bearer ${userInfo.token}` }
+      });
+      if (res.ok) {
+        setEarningsDetails(await res.json());
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   useEffect(() => {
     setStatsData({
@@ -503,8 +538,8 @@ const AdminDashboard = () => {
                   <div className="space-y-3">
                     {farmers.map((farmer) => (
                       <div
-                        key={farmer.id}
-                        className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
+                        key={farmer._id || farmer.id}
+                        className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-muted/50 rounded-lg gap-3"
                       >
                         <div className="flex items-center gap-3">
                           <div className="h-10 w-10 rounded-full bg-gram-green-100 flex items-center justify-center">
@@ -516,7 +551,34 @@ const AdminDashboard = () => {
                           </div>
                         </div>
 
-                        <Button variant="ghost" size="sm" onClick={() => { console.log('Farmer clicked:', farmer); setSelectedFarmer(farmer); }}>View</Button>
+                        {(() => {
+                           let pending = 0;
+                           orders.forEach(o => {
+                             o.items?.forEach((item: any) => {
+                               const itemFarmerId = item.farmer?._id || item.farmer;
+                               if (itemFarmerId === farmer._id && !item.isCleared) {
+                                 pending += (item.price * item.quantity);
+                               }
+                             });
+                           });
+                           return (
+                             <div className="flex flex-wrap items-center gap-4">
+                               <div className="text-right">
+                                 <p className="font-bold text-green-600">₹{pending}</p>
+                                 <p className="text-[10px] text-muted-foreground uppercase font-semibold tracking-wider">Pending</p>
+                               </div>
+                               <div className="flex items-center gap-2">
+                                 {pending > 0 && (
+                                   <Button size="sm" variant="outline" className="text-xs h-8 bg-green-50 border-green-200 text-green-700 hover:bg-green-100" onClick={() => handleClearEarnings(farmer._id)}>
+                                     Mark Paid
+                                   </Button>
+                                 )}
+                                 <Button variant="outline" size="sm" className="h-8" onClick={() => handleViewEarnings(farmer)}>Earnings</Button>
+                                 <Button variant="ghost" size="sm" className="h-8" onClick={() => setSelectedFarmer(farmer)}>Profile</Button>
+                               </div>
+                             </div>
+                           );
+                        })()}
                       </div>
                     ))}
                   </div>
@@ -751,6 +813,79 @@ const AdminDashboard = () => {
             </div>
           )}
 
+        </DialogContent>
+      </Dialog>
+      <Dialog open={!!viewingEarnings} onOpenChange={(open) => {
+        if (!open) {
+          setViewingEarnings(null);
+        }
+      }}>
+        <DialogContent className="sm:max-w-xl max-h-[90vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Earnings Details: {viewingEarnings?.name}</DialogTitle>
+            <DialogDescription>
+              Detailed breakdown of pending and cleared earnings.
+            </DialogDescription>
+          </DialogHeader>
+
+          {earningsDetails ? (
+            <div className="space-y-4 overflow-y-auto flex-1 pr-2">
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <div className="bg-amber-50 p-4 rounded-xl border border-amber-100">
+                  <p className="text-sm text-amber-800 font-medium mb-1">Pending Earnings</p>
+                  <p className="text-2xl font-bold text-amber-600">₹{earningsDetails.pendingEarnings}</p>
+                </div>
+                <div className="bg-green-50 p-4 rounded-xl border border-green-100">
+                  <p className="text-sm text-green-800 font-medium mb-1">Total Cleared</p>
+                  <p className="text-2xl font-bold text-green-600">₹{earningsDetails.clearedEarnings}</p>
+                </div>
+              </div>
+
+              <h4 className="font-semibold text-sm border-b pb-2">Transaction History</h4>
+              
+              {earningsDetails.details.length > 0 ? (
+                <div className="space-y-3">
+                  {earningsDetails.details.map((item: any, i: number) => (
+                    <div key={i} className="p-3 border rounded-lg bg-card flex justify-between items-center">
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-medium text-sm">{item.productName || 'Product'}</span>
+                          <span className="text-xs text-muted-foreground">Order #{item.orderId.substring(0, 6)}</span>
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          Earned on: {new Date(item.date).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' })}
+                        </div>
+                        {item.isCleared && item.clearedAt && (
+                          <div className="text-xs text-green-600 mt-1 font-medium">
+                            Paid on: {new Date(item.clearedAt).toLocaleString('en-IN', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                          </div>
+                        )}
+                      </div>
+                      <div className="text-right">
+                        <div className="font-bold">₹{item.amount}</div>
+                        <div className={cn(
+                          "text-[10px] px-2 py-0.5 rounded-full inline-block mt-1 uppercase font-semibold tracking-wider",
+                          item.isCleared ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"
+                        )}>
+                          {item.isCleared ? "Cleared" : "Pending"}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-center text-muted-foreground py-8">No earnings history found.</p>
+              )}
+            </div>
+          ) : (
+            <div className="py-12 flex justify-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          )}
+          
+          <Button variant="outline" className="w-full mt-4" onClick={() => setViewingEarnings(null)}>
+            Close
+          </Button>
         </DialogContent>
       </Dialog>
     </Layout >

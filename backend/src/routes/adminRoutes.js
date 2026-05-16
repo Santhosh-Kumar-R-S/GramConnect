@@ -7,7 +7,9 @@ import {
   getCategories,
   getUsers,
   listOrders,
-  analytics
+  analytics,
+  clearFarmerEarnings,
+  getFarmerEarnings
 } from "../controllers/adminController.js";
 
 const router = express.Router();
@@ -21,5 +23,8 @@ router.get("/categories", getCategories);
 router.get("/users", getUsers);
 router.get("/orders", listOrders);
 router.get("/analytics", analytics);
+
+router.get("/farmers/:id/earnings", getFarmerEarnings);
+router.post("/farmers/:id/clear-earnings", clearFarmerEarnings);
 
 export default router;

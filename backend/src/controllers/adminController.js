@@ -61,7 +61,8 @@ const getUsers = asyncHandler(async (req, res) => {
 const listOrders = asyncHandler(async (req, res) => {
   const orders = await Order.find()
     .populate("consumer", "name location")
-    .populate("farmer", "name village")
+    .populate("items.farmer", "name village")
+    .populate("items.product", "category name")
     .sort("-createdAt");
   res.json(orders);
 });
@@ -80,4 +81,71 @@ const analytics = asyncHandler(async (req, res) => {
   });
 });
 
-export { listFarmers, updateFarmerStatus, createCategory, getCategories, getUsers, listOrders, analytics };
+const clearFarmerEarnings = asyncHandler(async (req, res) => {
+  const farmerId = req.params.id;
+  
+  const orders = await Order.find({
+    "items.farmer": farmerId,
+    "items.isCleared": { $ne: true }
+  });
+
+  let totalCleared = 0;
+
+  for (const order of orders) {
+    let orderUpdated = false;
+    order.items.forEach(item => {
+      if (item.farmer.toString() === farmerId && !item.isCleared) {
+        item.isCleared = true;
+        item.clearedAt = new Date();
+        totalCleared += (item.price * item.quantity);
+        orderUpdated = true;
+      }
+    });
+
+    if (orderUpdated) {
+      await order.save();
+    }
+  }
+
+  res.json({ message: "Earnings cleared successfully", totalCleared });
+});
+
+const getFarmerEarnings = asyncHandler(async (req, res) => {
+  const farmerId = req.params.id;
+  
+  const orders = await Order.find({ "items.farmer": farmerId }).sort("-createdAt");
+  
+  let pendingEarnings = 0;
+  let clearedEarnings = 0;
+  const earningsDetails = [];
+
+  orders.forEach(order => {
+    order.items.forEach(item => {
+      if (item.farmer.toString() === farmerId) {
+        const amount = item.price * item.quantity;
+        if (item.isCleared) {
+          clearedEarnings += amount;
+        } else {
+          pendingEarnings += amount;
+        }
+
+        earningsDetails.push({
+          orderId: order._id,
+          date: order.createdAt,
+          amount,
+          isCleared: item.isCleared || false,
+          clearedAt: item.clearedAt,
+          productName: item.name
+        });
+      }
+    });
+  });
+
+  res.json({
+    pendingEarnings,
+    clearedEarnings,
+    details: earningsDetails
+  });
+});
+
+export { listFarmers, updateFarmerStatus, createCategory, getCategories, getUsers, listOrders, analytics, clearFarmerEarnings, getFarmerEarnings };

@@ -19,6 +19,13 @@ const orderItemSchema = new mongoose.Schema(
       type: String,
       enum: ["Pending", "Accepted", "Packed", "Shipped", "Delivered", "Rejected"],
       default: "Pending"
+    },
+    isCleared: {
+      type: Boolean,
+      default: false
+    },
+    clearedAt: {
+      type: Date
     }
   },
   { _id: true }
